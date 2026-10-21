@@ -157,7 +157,7 @@ npm run dev            # http://localhost:5173
 cd backend && pytest
 ```
 
-Backend (34 tests, 70% coverage) covers auth flows, project ownership isolation, GitHub service (mocked), LLM service (mocked), and the dashboard endpoint. Frontend (48 tests) covers every `src/api/*.ts` client function (success + error paths, including the 401 session-expiry interceptor) and the `usePageTitle` hook at 100%, plus the Login page's submit/error/unverified-resend flows — `src/lib/severity.ts` is still the only pure-utility file covered beyond that. Broader page/component coverage (`ProjectList`, `ReviewDetail`, `Register`, the auth context itself) is a known gap, not something CI is pretending to check.
+Backend (34 tests, 70% coverage) covers auth flows, project ownership isolation, GitHub service (mocked), LLM service (mocked), and the dashboard endpoint. Frontend (48 tests) covers every `src/api/*.ts` client function (success + error paths, including the 401 session-expiry interceptor) and the `usePageTitle` hook at 100%, plus the Login page's submit/error/unverified-resend flows and the severity-ranking utility. More page/component tests (`ProjectList`, `ReviewDetail`, `Register`, the auth context) are on the roadmap as the app grows.
 
 ---
 
