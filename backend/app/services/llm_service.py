@@ -1,4 +1,5 @@
 import json
+from typing import Any
 
 import groq
 
@@ -64,7 +65,7 @@ def review_diff(diff_text: str) -> tuple[ReviewFindings, str]:
     diff_snapshot = _truncate_diff(diff_text)
     client = groq.Groq(api_key=settings.groq_api_key)
 
-    request_kwargs = dict(
+    request_kwargs: dict[str, Any] = dict(
         model=MODEL_NAME,
         max_tokens=4096,
         temperature=0.1,

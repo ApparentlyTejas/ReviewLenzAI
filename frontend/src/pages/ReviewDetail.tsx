@@ -5,9 +5,7 @@ import { getReview } from "../api/projects";
 import { BackButton } from "../components/BackButton";
 import { pageTransition } from "../components/pageTransition";
 import { Spinner } from "../components/Spinner";
-import type { Finding } from "../types";
-
-const SEVERITY_ORDER: Record<Finding["severity"], number> = { critical: 0, high: 1, medium: 2, low: 3 };
+import { sortFindingsBySeverity } from "../lib/severity";
 
 export function ReviewDetail() {
   const { projectId, reviewId } = useParams<{ projectId: string; reviewId: string }>();
@@ -22,9 +20,7 @@ export function ReviewDetail() {
   if (isLoading) return <Spinner label="Loading review..." />;
   if (!review) return <p>Review not found.</p>;
 
-  const sortedFindings = [...review.findings].sort(
-    (a, b) => SEVERITY_ORDER[a.severity] - SEVERITY_ORDER[b.severity],
-  );
+  const sortedFindings = sortFindingsBySeverity(review.findings);
 
   return (
     <motion.div {...pageTransition}>

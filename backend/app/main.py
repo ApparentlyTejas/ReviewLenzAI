@@ -9,10 +9,10 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 from starlette.middleware.base import BaseHTTPMiddleware
 
+from app import models  # noqa: F401 — register models with Base before create_all
 from app.core.config import settings
 from app.core.database import Base, engine, get_db
 from app.core.limiter import limiter
-import app.models  # noqa: F401 — register models with Base before create_all
 from app.routers import auth, dashboard, github, projects, reviews
 
 
@@ -46,7 +46,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="AI Code Review Assistant", lifespan=lifespan)
 
 app.state.limiter = limiter
-app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)  # type: ignore[arg-type]  # slowapi's handler signature is narrower than starlette's stub, this is the documented usage
 app.add_middleware(SlowAPIMiddleware)
 app.add_middleware(SecurityHeadersMiddleware)
 
@@ -70,5 +70,5 @@ def health(db: Session = Depends(get_db)) -> dict[str, str]:
     try:
         db.execute(text("SELECT 1"))
         return {"status": "ok"}
-    except Exception:
-        raise HTTPException(status_code=503, detail="Database unavailable")
+    except Exception as exc:
+        raise HTTPException(status_code=503, detail="Database unavailable") from exc

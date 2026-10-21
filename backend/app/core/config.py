@@ -27,4 +27,6 @@ class Settings(BaseSettings):
         return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
 
 
-settings = Settings()
+# Required fields are supplied via environment variables / .env at runtime
+# (pydantic-settings' BaseSettings), which mypy can't see from this call site.
+settings = Settings()  # type: ignore[call-arg]

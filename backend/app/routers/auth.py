@@ -1,7 +1,8 @@
 import secrets
+from typing import Any, Literal
 
-from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 import httpx
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
@@ -11,18 +12,25 @@ from app.core.limiter import limiter
 from app.core.security import create_access_token, hash_password, verify_password
 from app.models.user import User
 from app.routers.deps import get_current_user
-from app.schemas.auth import RegisterResponse, ResendVerificationRequest, TokenResponse, UserLogin, UserOut, UserRegister
-from app.services.crypto_service import encrypt_pat, decrypt_pat
+from app.schemas.auth import (
+    RegisterResponse,
+    ResendVerificationRequest,
+    TokenResponse,
+    UserLogin,
+    UserOut,
+    UserRegister,
+)
+from app.services.crypto_service import encrypt_pat
 from app.services.email_service import send_verification_email, send_welcome_email
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
-_SAMESITE = "none" if settings.cookie_secure else "lax"
-_COOKIE_KWARGS = dict(
-    httponly=True,
-    secure=settings.cookie_secure,
-    samesite=_SAMESITE,
-)
+_SAMESITE: Literal["none", "lax"] = "none" if settings.cookie_secure else "lax"
+_COOKIE_KWARGS: dict[str, Any] = {
+    "httponly": True,
+    "secure": settings.cookie_secure,
+    "samesite": _SAMESITE,
+}
 
 
 def _set_auth_cookies(response: Response, token: str) -> None:
@@ -135,6 +143,8 @@ def google_login(request: Request, response: Response, payload: GooglePayload, d
         db.commit()
         db.refresh(user)
 
+    assert user is not None
+
     if is_new:
         try:
             send_welcome_email(email)
@@ -198,6 +208,7 @@ def github_login(request: Request, response: Response, payload: GitHubPayload, d
         user = User(email=email, hashed_password="", is_verified=True)
         db.add(user)
 
+    assert user is not None
     user.github_access_token = encrypt_pat(access_token)
     db.commit()
     db.refresh(user)

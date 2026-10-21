@@ -1,10 +1,10 @@
 import json
 from unittest.mock import MagicMock, patch
 
+import groq
 import httpx
 import pytest
 
-import groq
 from app.services.llm_service import MAX_DIFF_CHARS, LLMReviewError, _truncate_diff, review_diff
 
 

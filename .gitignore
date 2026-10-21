@@ -15,6 +15,13 @@ venv/
 node_modules/
 frontend/dist/
 frontend/.vercel/
+frontend/coverage/
+
+# Coverage reports
+backend/.coverage
+backend/coverage.xml
+backend/htmlcov/
+.coverage
 
 # Editors / OS
 .DS_Store

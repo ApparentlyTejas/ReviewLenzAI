@@ -4,7 +4,7 @@
 
 **[reviewlenzai.vercel.app](https://reviewlenzai.vercel.app)**
 
-![CI](https://github.com/ApparentlyTejas/ai-code-review-assistant/actions/workflows/tests.yml/badge.svg)
+![CI](https://github.com/ApparentlyTejas/ReviewLenzAI/actions/workflows/ci.yml/badge.svg)
 ![Python](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688?logo=fastapi&logoColor=white)
 ![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)
@@ -82,7 +82,7 @@ The Vercel → Render proxy keeps auth cookies first-party and eliminates CORS e
 | **LLM** | Groq API `llama-3.3-70b-versatile` · `temperature=0.1` · structured tool-calling |
 | **Email** | Brevo transactional email |
 | **Security** | HttpOnly cookies · Fernet-encrypted OAuth tokens · bcrypt · JWT · SlowAPI rate limiting · security headers |
-| **CI/CD** | GitHub Actions pytest + Vite build on every push |
+| **CI/CD** | GitHub Actions: ruff + mypy + pytest-cov (backend), oxlint + tsc + vitest-cov (frontend) on every push |
 | **Deploy** | Vercel (frontend) · Render (API) · Neon (Postgres) |
 
 ---
@@ -157,7 +157,32 @@ npm run dev            # http://localhost:5173
 cd backend && pytest
 ```
 
-Tests cover auth flows, project ownership isolation, GitHub service (mocked), LLM service (mocked), and the dashboard endpoint.
+Tests cover auth flows, project ownership isolation, GitHub service (mocked), LLM service (mocked), and the dashboard endpoint. Frontend coverage is currently limited to the severity-ranking utility in `src/lib/severity.ts` — broader frontend test coverage (API layer, pages, auth context) is a known gap, not something CI is pretending to check.
+
+---
+
+## Lint, type-check, and coverage locally
+
+Same checks CI runs on every push, if you want to run them before pushing.
+
+**Backend** (from `backend/`, with your `.venv` active)
+```bash
+pip install -r requirements-dev.txt   # ruff, mypy, pytest-cov, type stubs
+ruff check .                          # lint
+mypy app                              # type-check
+pytest --cov=app --cov-report=term-missing --cov-report=html   # tests + coverage
+open htmlcov/index.html               # browse the coverage report
+```
+
+**Frontend** (from `frontend/`)
+```bash
+npm run lint           # oxlint
+npm run typecheck      # tsc -b --noEmit
+npm run test:coverage  # vitest run --coverage
+open coverage/index.html
+```
+
+Config lives in `backend/ruff.toml`, `backend/mypy.ini`, and `frontend/.oxlintrc.json` / `frontend/tsconfig.app.json`.
 
 ---
 
