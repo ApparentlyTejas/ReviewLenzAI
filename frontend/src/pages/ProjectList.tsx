@@ -272,9 +272,10 @@ export function ProjectList() {
             {isFormOpen && (
               <motion.div
                 className="connect-repo-form"
+                style={{ overflow: "hidden" }}
                 initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: "auto" }}
-                exit={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto", transitionEnd: { overflow: "visible" } }}
+                exit={{ opacity: 0, height: 0, overflow: "hidden" }}
                 transition={{ duration: 0.22, ease: "easeOut" }}
               >
                 {user?.has_github && (
