@@ -10,6 +10,13 @@ const repos: GitHubRepo[] = [
   { full_name: "acme-org/widgets", owner: "acme-org", name: "widgets", private: false },
 ];
 
+const manyRepos: GitHubRepo[] = Array.from({ length: 10 }, (_, i) => ({
+  full_name: `octocat/repo-${i}`,
+  owner: "octocat",
+  name: `repo-${i}`,
+  private: false,
+}));
+
 afterEach(() => {
   cleanup();
 });
@@ -73,6 +80,18 @@ describe("RepoPicker", () => {
     render(<RepoPicker repos={repos} value="octocat/Secret-Repo" onChange={vi.fn()} />);
     expect(screen.getByText("octocat/Secret-Repo")).toBeInTheDocument();
     expect(screen.queryByText("Select a repository")).not.toBeInTheDocument();
+  });
+
+  it("hides the scroll-fade hint when the list is short", () => {
+    render(<RepoPicker repos={repos} value="" onChange={vi.fn()} />);
+    fireEvent.click(screen.getByRole("button", { name: /select a repository/i }));
+    expect(document.querySelector('[style*="linear-gradient"]')).not.toBeInTheDocument();
+  });
+
+  it("shows a scroll-fade hint when the list is long enough to be cropped", () => {
+    render(<RepoPicker repos={manyRepos} value="" onChange={vi.fn()} />);
+    fireEvent.click(screen.getByRole("button", { name: /select a repository/i }));
+    expect(document.querySelector('[style*="linear-gradient"]')).toBeInTheDocument();
   });
 
   it("closes when clicking outside the picker", () => {

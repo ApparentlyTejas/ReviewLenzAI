@@ -103,43 +103,58 @@ export function RepoPicker({ repos, value, onChange }: Props) {
               style={{ width: "100%", fontSize: 13, padding: "7px 10px", margin: 0, boxSizing: "border-box" }}
             />
           </div>
-          <div style={{ maxHeight: 240, overflowY: "auto" }}>
-            {filtered.length === 0 ? (
-              <p style={{ fontSize: 13, color: "var(--text-muted)", padding: "10px 14px", margin: 0 }}>No repos found</p>
-            ) : (
-              filtered.map(r => (
-                <button
-                  key={r.full_name}
-                  type="button"
-                  onClick={() => { onChange(r.full_name); setOpen(false); setSearch(""); }}
-                  style={{
-                    width: "100%",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 8,
-                    padding: "9px 14px",
-                    background: r.full_name === value ? "var(--bg-subtle)" : "transparent",
-                    border: "none",
-                    borderRadius: 0,
-                    fontSize: 13,
-                    color: "var(--text-primary)",
-                    cursor: "pointer",
-                    textAlign: "left",
-                    fontFamily: "inherit",
-                  }}
-                  onMouseEnter={e => (e.currentTarget.style.background = "var(--bg-subtle)")}
-                  onMouseLeave={e => (e.currentTarget.style.background = r.full_name === value ? "var(--bg-subtle)" : "transparent")}
-                >
-                  <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                    {r.full_name}
-                  </span>
-                  {r.private && (
-                    <span style={{ display: "flex", alignItems: "center", gap: 3, fontSize: 11, color: "var(--text-muted)", flexShrink: 0 }}>
-                      <LockIcon /> private
+          <div style={{ position: "relative" }}>
+            <div style={{ maxHeight: 240, overflowY: "auto" }}>
+              {filtered.length === 0 ? (
+                <p style={{ fontSize: 13, color: "var(--text-muted)", padding: "10px 14px", margin: 0 }}>No repos found</p>
+              ) : (
+                filtered.map(r => (
+                  <button
+                    key={r.full_name}
+                    type="button"
+                    onClick={() => { onChange(r.full_name); setOpen(false); setSearch(""); }}
+                    style={{
+                      width: "100%",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 8,
+                      padding: "9px 14px",
+                      background: r.full_name === value ? "var(--bg-subtle)" : "transparent",
+                      border: "none",
+                      borderRadius: 0,
+                      fontSize: 13,
+                      color: "var(--text-primary)",
+                      cursor: "pointer",
+                      textAlign: "left",
+                      fontFamily: "inherit",
+                    }}
+                    onMouseEnter={e => (e.currentTarget.style.background = "var(--bg-subtle)")}
+                    onMouseLeave={e => (e.currentTarget.style.background = r.full_name === value ? "var(--bg-subtle)" : "transparent")}
+                  >
+                    <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {r.full_name}
                     </span>
-                  )}
-                </button>
-              ))
+                    {r.private && (
+                      <span style={{ display: "flex", alignItems: "center", gap: 3, fontSize: 11, color: "var(--text-muted)", flexShrink: 0 }}>
+                        <LockIcon /> private
+                      </span>
+                    )}
+                  </button>
+                ))
+              )}
+            </div>
+            {filtered.length > 6 && (
+              <div
+                style={{
+                  position: "absolute",
+                  bottom: 0,
+                  left: 0,
+                  right: 0,
+                  height: 20,
+                  background: "linear-gradient(to bottom, transparent, var(--bg))",
+                  pointerEvents: "none",
+                }}
+              />
             )}
           </div>
         </div>
