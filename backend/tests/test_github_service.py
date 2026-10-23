@@ -37,6 +37,77 @@ def test_validate_repo_access_missing_repo_raises_not_found(mock_get):
 
 
 @patch("app.services.github_service.httpx.get")
+def test_list_user_repos_requests_org_member_affiliation(mock_get):
+    """Regression test: without `organization_member` in `affiliation`, repos
+    the user can only see via an org membership never show up in the
+    "Browse repos" picker, even though the OAuth token has `repo` scope."""
+    mock_get.return_value = _mock_response(200, json_data=[])
+    github_service.list_user_repos("fake-pat")
+    _, kwargs = mock_get.call_args
+    affiliation = kwargs["params"]["affiliation"].split(",")
+    assert set(affiliation) == {"owner", "collaborator", "organization_member"}
+
+
+@patch("app.services.github_service.httpx.get")
+def test_list_user_repos_parses_fields(mock_get):
+    mock_get.return_value = _mock_response(
+        200,
+        json_data=[
+            {
+                "full_name": "octocat/Hello-World",
+                "owner": {"login": "octocat"},
+                "name": "Hello-World",
+                "private": False,
+            }
+        ],
+    )
+    repos = github_service.list_user_repos("fake-pat")
+    assert repos == [
+        {
+            "full_name": "octocat/Hello-World",
+            "owner": "octocat",
+            "name": "Hello-World",
+            "private": False,
+        }
+    ]
+
+
+@patch("app.services.github_service.httpx.get")
+def test_list_user_repos_paginates_until_short_page(mock_get):
+    full_page = [
+        {
+            "full_name": f"octocat/repo-{i}",
+            "owner": {"login": "octocat"},
+            "name": f"repo-{i}",
+            "private": False,
+        }
+        for i in range(100)
+    ]
+    short_page = [
+        {
+            "full_name": "octocat/repo-100",
+            "owner": {"login": "octocat"},
+            "name": "repo-100",
+            "private": False,
+        }
+    ]
+    mock_get.side_effect = [
+        _mock_response(200, json_data=full_page),
+        _mock_response(200, json_data=short_page),
+    ]
+    repos = github_service.list_user_repos("fake-pat")
+    assert len(repos) == 101
+    assert mock_get.call_count == 2
+
+
+@patch("app.services.github_service.httpx.get")
+def test_list_user_repos_invalid_token_raises(mock_get):
+    mock_get.return_value = _mock_response(401)
+    with pytest.raises(github_service.GitHubAuthError):
+        github_service.list_user_repos("bad-pat")
+
+
+@patch("app.services.github_service.httpx.get")
 def test_list_open_pull_requests_parses_fields(mock_get):
     mock_get.return_value = _mock_response(
         200,

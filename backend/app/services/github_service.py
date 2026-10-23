@@ -22,7 +22,15 @@ def list_user_repos(pat: str) -> list[dict]:
         response = httpx.get(
             f"{GITHUB_API_BASE}/user/repos",
             headers=_headers(pat),
-            params={"per_page": 100, "page": page, "sort": "pushed", "affiliation": "owner,collaborator"},
+            params={
+                "per_page": 100,
+                "page": page,
+                "sort": "pushed",
+                # Without "organization_member", repos the user can only see
+                # via an org membership (not direct ownership or a repo-level
+                # collaborator invite) never show up in "Browse repos" at all.
+                "affiliation": "owner,collaborator,organization_member",
+            },
             timeout=10,
         )
         if response.status_code == 401:
