@@ -364,7 +364,9 @@ h2 {
   padding: 20px;
   margin-top: 14px;
   margin-bottom: 20px;
-  overflow: hidden;
+  /* overflow is managed inline by the motion.div (ProjectList.tsx): hidden
+     during the open/close height animation, switched to visible once open
+     so the RepoPicker's absolutely-positioned dropdown isn't clipped. */
 }
 
 label {
