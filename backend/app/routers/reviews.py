@@ -105,8 +105,16 @@ def list_reviews(
     project_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)
 ) -> list[dict]:
     project = _get_owned_project(db, project_id, current_user)
+    # created_at alone isn't a reliable sort key: two reviews created within
+    # the same second (SQLite's func.now() only has second resolution, and
+    # even Postgres timestamps can tie under concurrent requests) sort
+    # arbitrarily without a tiebreaker. id is monotonically increasing with
+    # insertion order, so it's a free, deterministic secondary key.
     reviews = (
-        db.query(Review).filter(Review.project_id == project.id).order_by(Review.created_at.desc()).all()
+        db.query(Review)
+        .filter(Review.project_id == project.id)
+        .order_by(Review.created_at.desc(), Review.id.desc())
+        .all()
     )
     return [
         {
