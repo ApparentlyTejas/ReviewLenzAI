@@ -82,7 +82,7 @@ export function Login() {
         className="auth-glass"
         initial={{ opacity: 0, y: 24, scale: 0.97 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
-        transition={{ duration: 0.4, ease: "easeOut" }}
+        transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
       >
         <Link to="/" className="auth-glass-brand">
           <Logo size={28} />
