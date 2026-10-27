@@ -26,6 +26,15 @@ def list_dashboard_chat_messages(
     return current_user.dashboard_chat_messages
 
 
+@router.delete("", status_code=status.HTTP_204_NO_CONTENT)
+def clear_dashboard_chat_messages(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> None:
+    db.query(DashboardChatMessage).filter(DashboardChatMessage.user_id == current_user.id).delete()
+    db.commit()
+
+
 def _stream_dashboard_chat_response(
     *,
     user_id: int,

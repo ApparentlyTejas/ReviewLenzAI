@@ -109,3 +109,34 @@ def test_dashboard_chat_is_scoped_per_user(mock_stream, client):
 
     history_a = client.get("/dashboard/chat", headers=headers_a).json()
     assert len(history_a) == 2
+
+
+@patch(f"{_PATCH_TARGET}.stream_dashboard_answer")
+def test_clear_dashboard_chat_messages_removes_all_history(mock_stream, client):
+    headers = _register_and_login(client, "dchat-clear@example.com")
+    mock_stream.side_effect = _fake_stream("An answer")
+    client.post("/dashboard/chat", json={"content": "A question"}, headers=headers)
+    assert len(client.get("/dashboard/chat", headers=headers).json()) == 2
+
+    clear_resp = client.delete("/dashboard/chat", headers=headers)
+    assert clear_resp.status_code == 204
+
+    assert client.get("/dashboard/chat", headers=headers).json() == []
+
+
+def test_clear_dashboard_chat_messages_requires_auth(client):
+    assert client.delete("/dashboard/chat").status_code == 401
+
+
+@patch(f"{_PATCH_TARGET}.stream_dashboard_answer")
+def test_clear_dashboard_chat_messages_is_scoped_per_user(mock_stream, client):
+    headers_a = _register_and_login(client, "dchat-clear-a@example.com")
+    headers_b = _register_and_login(client, "dchat-clear-b@example.com")
+
+    mock_stream.side_effect = _fake_stream("Answer for A")
+    client.post("/dashboard/chat", json={"content": "Question from A"}, headers=headers_a)
+
+    client.delete("/dashboard/chat", headers=headers_b)
+
+    history_a = client.get("/dashboard/chat", headers=headers_a).json()
+    assert len(history_a) == 2

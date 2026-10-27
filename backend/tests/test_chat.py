@@ -212,3 +212,40 @@ def test_send_chat_message_on_pending_review_returns_400(mock_get_pr, client):
     )
 
     assert response.status_code == 400
+
+
+@patch(f"{_CHAT_PATCH_TARGET}.stream_chat_answer")
+def test_clear_chat_messages_removes_all_history(mock_stream, client):
+    headers = _register_and_login(client, "chat5@example.com")
+    project_id = _create_project(client, headers)
+    review_id = _create_completed_review(client, headers, project_id)
+
+    mock_stream.side_effect = _fake_stream("An answer")
+    client.post(
+        f"/projects/{project_id}/reviews/{review_id}/chat",
+        json={"content": "A question"},
+        headers=headers,
+    )
+    assert len(client.get(f"/projects/{project_id}/reviews/{review_id}/chat", headers=headers).json()) == 2
+
+    clear_resp = client.delete(f"/projects/{project_id}/reviews/{review_id}/chat", headers=headers)
+    assert clear_resp.status_code == 204
+
+    history = client.get(f"/projects/{project_id}/reviews/{review_id}/chat", headers=headers).json()
+    assert history == []
+
+
+def test_clear_chat_messages_requires_auth(client):
+    response = client.delete("/projects/1/reviews/1/chat")
+    assert response.status_code == 401
+
+
+def test_clear_chat_messages_on_other_users_review_returns_404(client):
+    headers_a = _register_and_login(client, "chatclear-owner@example.com")
+    headers_b = _register_and_login(client, "chatclear-intruder@example.com")
+    project_id = _create_project(client, headers_a)
+    review_id = _create_completed_review(client, headers_a, project_id)
+
+    response = client.delete(f"/projects/{project_id}/reviews/{review_id}/chat", headers=headers_b)
+
+    assert response.status_code == 404

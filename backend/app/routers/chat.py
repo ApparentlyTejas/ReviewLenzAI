@@ -40,6 +40,18 @@ def list_chat_messages(
     return review.chat_messages
 
 
+@router.delete("", status_code=status.HTTP_204_NO_CONTENT)
+def clear_chat_messages(
+    project_id: int,
+    review_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> None:
+    review = _get_owned_review(db, project_id, review_id, current_user)
+    db.query(ChatMessage).filter(ChatMessage.review_id == review.id).delete()
+    db.commit()
+
+
 def _stream_chat_response(
     *,
     review_id: int,
