@@ -5,24 +5,28 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { ChatPanel } from "./ChatPanel";
 import { ToastProvider } from "./Toast";
 
-vi.mock("../api/chat", () => ({
-  listChatMessages: vi.fn(),
-  sendChatMessage: vi.fn(),
-}));
+vi.mock("../api/chat", async () => {
+  const actual = await vi.importActual<typeof import("../api/chat")>("../api/chat");
+  return {
+    ...actual,
+    listChatMessages: vi.fn(),
+    streamChatMessage: vi.fn(),
+  };
+});
 
-import { listChatMessages, sendChatMessage } from "../api/chat";
+import { listChatMessages, streamChatMessage, ChatStreamError } from "../api/chat";
 
 const mockedList = listChatMessages as unknown as ReturnType<typeof vi.fn>;
-const mockedSend = sendChatMessage as unknown as ReturnType<typeof vi.fn>;
+const mockedStream = streamChatMessage as unknown as ReturnType<typeof vi.fn>;
 
-function renderChatPanel() {
+function renderChatPanel(props: Partial<React.ComponentProps<typeof ChatPanel>> = {}) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
   return render(
     <QueryClientProvider client={queryClient}>
       <ToastProvider>
-        <ChatPanel projectId={1} reviewId={2} />
+        <ChatPanel projectId={1} reviewId={2} {...props} />
       </ToastProvider>
     </QueryClientProvider>,
   );
@@ -41,28 +45,35 @@ describe("ChatPanel", () => {
     expect(await screen.findByText(/ask a follow-up question/i)).toBeInTheDocument();
   });
 
-  it("renders existing chat history", async () => {
+  it("renders existing chat history as markdown", async () => {
     mockedList.mockResolvedValueOnce([
       { id: 1, role: "user", content: "Is this safe?", created_at: "2026-01-01T00:00:00Z" },
-      { id: 2, role: "assistant", content: "Yes, looks fine.", created_at: "2026-01-01T00:00:01Z" },
+      { id: 2, role: "assistant", content: "**Yes**, looks fine.", created_at: "2026-01-01T00:00:01Z" },
     ]);
     renderChatPanel();
 
     expect(await screen.findByText("Is this safe?")).toBeInTheDocument();
-    expect(screen.getByText("Yes, looks fine.")).toBeInTheDocument();
+    const strong = await screen.findByText("Yes");
+    expect(strong.tagName).toBe("STRONG");
   });
 
-  it("sends a message and refreshes the history with the reply", async () => {
-    mockedList.mockResolvedValueOnce([]);
-    mockedList.mockResolvedValueOnce([
-      { id: 1, role: "user", content: "What about line 12?", created_at: "2026-01-01T00:00:00Z" },
-      { id: 2, role: "assistant", content: "It's a null-check issue.", created_at: "2026-01-01T00:00:01Z" },
-    ]);
-    mockedSend.mockResolvedValueOnce({
-      id: 2,
-      role: "assistant",
-      content: "It's a null-check issue.",
-      created_at: "2026-01-01T00:00:01Z",
+  it("streams a reply and refreshes history with the final persisted message", async () => {
+    let listCallCount = 0;
+    mockedList.mockImplementation(() => {
+      listCallCount += 1;
+      return Promise.resolve(
+        listCallCount === 1
+          ? []
+          : [
+              { id: 1, role: "user", content: "What about line 12?", created_at: "2026-01-01T00:00:00Z" },
+              { id: 2, role: "assistant", content: "It's a null-check issue.", created_at: "2026-01-01T00:00:01Z" },
+            ],
+      );
+    });
+    mockedStream.mockImplementationOnce(async (_p, _r, _content, onDelta) => {
+      onDelta("It's a ");
+      onDelta("null-check issue.");
+      return { id: 2, role: "assistant", content: "It's a null-check issue.", created_at: "2026-01-01T00:00:01Z" };
     });
 
     renderChatPanel();
@@ -72,8 +83,9 @@ describe("ChatPanel", () => {
     fireEvent.change(input, { target: { value: "What about line 12?" } });
     fireEvent.submit(input.closest("form")!);
 
-    await waitFor(() => expect(mockedSend).toHaveBeenCalledWith(1, 2, "What about line 12?"));
-    expect(await screen.findByText("It's a null-check issue.")).toBeInTheDocument();
+    await waitFor(() => expect(mockedStream).toHaveBeenCalled());
+    await waitFor(async () => expect(await screen.findByText("It's a null-check issue.")).toBeInTheDocument());
+    expect(mockedStream).toHaveBeenCalledWith(1, 2, "What about line 12?", expect.any(Function), expect.anything());
   });
 
   it("does not submit an empty message", async () => {
@@ -83,6 +95,34 @@ describe("ChatPanel", () => {
 
     fireEvent.click(screen.getByRole("button", { name: /send/i }));
 
-    await waitFor(() => expect(mockedSend).not.toHaveBeenCalled());
+    await waitFor(() => expect(mockedStream).not.toHaveBeenCalled());
+  });
+
+  it("shows the stream error as a toast and clears the pending state", async () => {
+    mockedList.mockResolvedValueOnce([]);
+    mockedList.mockResolvedValueOnce([]);
+    mockedStream.mockRejectedValueOnce(new ChatStreamError("Groq API call failed", 502));
+
+    renderChatPanel();
+    await screen.findByText(/ask a follow-up question/i);
+
+    const input = screen.getByPlaceholderText(/ask a question about this review/i);
+    fireEvent.change(input, { target: { value: "Will this fail?" } });
+    fireEvent.submit(input.closest("form")!);
+
+    expect(await screen.findByText("Groq API call failed")).toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByText("Will this fail?")).not.toBeInTheDocument());
+  });
+
+  it("prefills the input when the prefill prop is set", async () => {
+    mockedList.mockResolvedValueOnce([]);
+    const onPrefillConsumed = vi.fn();
+    renderChatPanel({ prefill: "Explain the high bug issue at app.py:15.", onPrefillConsumed });
+
+    await screen.findByText(/ask a follow-up question/i);
+    const input = screen.getByPlaceholderText(/ask a question about this review/i) as HTMLInputElement;
+
+    await waitFor(() => expect(input.value).toBe("Explain the high bug issue at app.py:15."));
+    expect(onPrefillConsumed).toHaveBeenCalled();
   });
 });

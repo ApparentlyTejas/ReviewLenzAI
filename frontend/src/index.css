@@ -547,10 +547,37 @@ button.small {
   margin-bottom: 8px;
 }
 
+.review-detail-grid {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr;
+  gap: 24px;
+  align-items: start;
+}
+
+@media (max-width: 860px) {
+  .review-detail-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.finding-ask-button {
+  margin-top: 10px;
+}
+
 .chat-panel {
-  margin-top: 32px;
-  border-top: 1px solid var(--border);
-  padding-top: 24px;
+  position: sticky;
+  top: 20px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 18px;
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100vh - 40px);
+}
+
+.chat-panel h2 {
+  margin-top: 0;
 }
 
 .chat-messages {
@@ -558,7 +585,9 @@ button.small {
   flex-direction: column;
   gap: 10px;
   margin-bottom: 14px;
-  max-height: 420px;
+  flex: 1;
+  min-height: 160px;
+  max-height: 55vh;
   overflow-y: auto;
 }
 
@@ -571,7 +600,7 @@ button.small {
   border: 1px solid var(--border);
   border-radius: 8px;
   padding: 10px 14px;
-  max-width: 85%;
+  max-width: 92%;
 }
 
 .chat-message p {
@@ -596,8 +625,66 @@ button.small {
   align-self: flex-start;
 }
 
-.chat-message-pending p {
+.chat-thinking {
+  margin: 4px 0 0;
   color: var(--text-secondary);
+}
+
+.chat-thinking::after {
+  content: "";
+  display: inline-block;
+  width: 1em;
+  animation: chat-thinking-dots 1.2s steps(4, end) infinite;
+  overflow: hidden;
+  vertical-align: bottom;
+}
+
+@keyframes chat-thinking-dots {
+  0% { content: ""; }
+  25% { content: "."; }
+  50% { content: ".."; }
+  75% { content: "..."; }
+}
+
+.chat-markdown {
+  margin-top: 4px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.chat-markdown p {
+  margin: 0 0 8px;
+}
+
+.chat-markdown p:last-child {
+  margin-bottom: 0;
+}
+
+.chat-markdown pre {
+  background: var(--code-bg);
+  border-radius: 6px;
+  padding: 10px 12px;
+  overflow-x: auto;
+  font-size: 13px;
+}
+
+.chat-markdown code {
+  font-family: var(--mono);
+  background: var(--code-bg);
+  padding: 1px 4px;
+  border-radius: 4px;
+  font-size: 0.9em;
+}
+
+.chat-markdown pre code {
+  background: none;
+  padding: 0;
+}
+
+.chat-markdown ul,
+.chat-markdown ol {
+  margin: 0 0 8px;
+  padding-left: 20px;
 }
 
 .chat-input-row {
