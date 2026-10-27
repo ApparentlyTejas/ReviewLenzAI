@@ -6,6 +6,10 @@ export async function listChatMessages(projectId: number, reviewId: number): Pro
   return data;
 }
 
+export async function clearChatMessages(projectId: number, reviewId: number): Promise<void> {
+  await apiClient.delete(`/projects/${projectId}/reviews/${reviewId}/chat`);
+}
+
 export class ChatStreamError extends Error {
   status?: number;
 

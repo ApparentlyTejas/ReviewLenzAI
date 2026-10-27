@@ -12,6 +12,7 @@ import { GitHubLoginButton } from "../components/GitHubLoginButton";
 import { RepoPicker } from "../components/RepoPicker";
 import { ChevronRightIcon } from "../components/Icons";
 import { DashboardChatPanel } from "../components/DashboardChatPanel";
+import { TiltCard } from "../components/TiltCard";
 import { pageTransition } from "../components/pageTransition";
 import { Spinner } from "../components/Spinner";
 import { useToast } from "../components/Toast";
@@ -188,7 +189,7 @@ export function ProjectList() {
             { label: "Reviews",  value: summary.total_reviews,  sub: "AI reviews completed"  },
             { label: "Findings", value: summary.total_findings, sub: null                    },
           ].map((card, i) => (
-            <motion.div
+            <TiltCard
               key={card.label}
               className="stat-card"
               role="button"
@@ -218,7 +219,7 @@ export function ProjectList() {
               ) : (
                 <span className="stat-card-sub">{card.sub}</span>
               )}
-            </motion.div>
+            </TiltCard>
           ))}
         </div>
       )}
@@ -416,7 +417,8 @@ export function ProjectList() {
           {!hasNoProjects && (
             <ul className="project-list">
               {sortedProjects?.map((project, index) => (
-                <motion.li
+                <TiltCard
+                  as="li"
                   key={project.id}
                   initial={{ opacity: 0, y: 6 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -442,7 +444,7 @@ export function ProjectList() {
                     onConfirm={() => deleteProjectMutation.mutate(project.id)}
                     disabled={deleteProjectMutation.isPending}
                   />
-                </motion.li>
+                </TiltCard>
               ))}
             </ul>
           )}

@@ -12,6 +12,7 @@ function renderChatThread(overrides: Partial<React.ComponentProps<typeof ChatThr
   });
   const listMessages = overrides.listMessages ?? vi.fn().mockResolvedValue([]);
   const streamMessage = overrides.streamMessage ?? vi.fn();
+  const clearMessages = overrides.clearMessages ?? vi.fn().mockResolvedValue(undefined);
 
   const utils = render(
     <QueryClientProvider client={queryClient}>
@@ -23,13 +24,14 @@ function renderChatThread(overrides: Partial<React.ComponentProps<typeof ChatThr
           queryKey={["test-chat"]}
           listMessages={listMessages}
           streamMessage={streamMessage}
+          clearMessages={clearMessages}
           {...overrides}
         />
       </ToastProvider>
     </QueryClientProvider>,
   );
 
-  return { ...utils, listMessages, streamMessage };
+  return { ...utils, listMessages, streamMessage, clearMessages };
 }
 
 afterEach(() => {
@@ -143,5 +145,32 @@ describe("ChatThread", () => {
 
     await waitFor(() => expect(capturedSignal?.aborted).toBe(true));
     await waitFor(() => expect(screen.getByRole("button", { name: /send/i })).toBeInTheDocument());
+  });
+
+  it("does not show a New chat button when there's no history", async () => {
+    renderChatThread();
+    await screen.findByText(/ask a follow-up question here/i);
+    expect(screen.queryByRole("button", { name: /new chat/i })).not.toBeInTheDocument();
+  });
+
+  it("clears history when New chat is clicked", async () => {
+    let listCallCount = 0;
+    const listMessages = vi.fn().mockImplementation(() => {
+      listCallCount += 1;
+      return Promise.resolve(
+        listCallCount === 1
+          ? [{ id: 1, role: "user", content: "Old question", created_at: "2026-01-01T00:00:00Z" }]
+          : [],
+      );
+    });
+    const clearMessages = vi.fn().mockResolvedValue(undefined);
+
+    renderChatThread({ listMessages, clearMessages });
+    await screen.findByText("Old question");
+
+    fireEvent.click(screen.getByRole("button", { name: /new chat/i }));
+
+    expect(clearMessages).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(screen.queryByText("Old question")).not.toBeInTheDocument());
   });
 });

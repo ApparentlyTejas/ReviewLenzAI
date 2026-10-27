@@ -7,6 +7,10 @@ export async function listDashboardChatMessages(): Promise<ChatMessage[]> {
   return data;
 }
 
+export async function clearDashboardChatMessages(): Promise<void> {
+  await apiClient.delete("/dashboard/chat");
+}
+
 export async function streamDashboardChatMessage(
   content: string,
   onDelta: (chunk: string) => void,

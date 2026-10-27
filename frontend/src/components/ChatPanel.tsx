@@ -1,4 +1,4 @@
-import { listChatMessages, streamChatMessage } from "../api/chat";
+import { clearChatMessages, listChatMessages, streamChatMessage } from "../api/chat";
 import { ChatThread } from "./ChatThread";
 
 interface ChatPanelProps {
@@ -22,6 +22,7 @@ export function ChatPanel({ projectId, reviewId, prefill, onPrefillConsumed }: C
       queryKey={["chat", projectId, reviewId]}
       listMessages={() => listChatMessages(projectId, reviewId)}
       streamMessage={(content, onDelta, signal) => streamChatMessage(projectId, reviewId, content, onDelta, signal)}
+      clearMessages={() => clearChatMessages(projectId, reviewId)}
       prefill={prefill}
       onPrefillConsumed={onPrefillConsumed}
     />

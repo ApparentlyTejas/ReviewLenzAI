@@ -7,6 +7,7 @@ import { BackButton } from "../components/BackButton";
 import { ConfirmDeleteButton } from "../components/ConfirmDeleteButton";
 import { pageTransition } from "../components/pageTransition";
 import { Spinner } from "../components/Spinner";
+import { TiltCard } from "../components/TiltCard";
 import { useToast } from "../components/Toast";
 import type { ReviewSummary } from "../types";
 
@@ -68,7 +69,8 @@ export function ReviewHistory() {
 
       <ul className="review-history-list">
         {sortedReviews?.map((review, index) => (
-          <motion.li
+          <TiltCard
+            as="li"
             key={review.id}
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
@@ -84,7 +86,7 @@ export function ReviewHistory() {
               onConfirm={() => deleteMutation.mutate(review.id)}
               disabled={deleteMutation.isPending}
             />
-          </motion.li>
+          </TiltCard>
         ))}
         {reviews?.length === 0 && <p>No reviews yet.</p>}
       </ul>

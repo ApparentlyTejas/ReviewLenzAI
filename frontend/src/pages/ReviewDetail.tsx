@@ -7,6 +7,7 @@ import { BackButton } from "../components/BackButton";
 import { ChatPanel } from "../components/ChatPanel";
 import { pageTransition } from "../components/pageTransition";
 import { Spinner } from "../components/Spinner";
+import { TiltCard } from "../components/TiltCard";
 import { sortFindingsBySeverity } from "../lib/severity";
 
 export function ReviewDetail() {
@@ -53,7 +54,8 @@ export function ReviewDetail() {
       <div className={review.status === "completed" ? "review-detail-grid" : undefined}>
         <ul className="finding-list">
           {sortedFindings.map((finding, index) => (
-            <motion.li
+            <TiltCard
+              as="li"
               key={finding.id}
               className={`finding finding-${finding.severity}`}
               initial={{ opacity: 0, y: 12 }}
@@ -80,7 +82,7 @@ export function ReviewDetail() {
                   Ask about this
                 </button>
               )}
-            </motion.li>
+            </TiltCard>
           ))}
         </ul>
 

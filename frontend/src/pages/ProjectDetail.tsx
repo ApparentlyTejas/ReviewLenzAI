@@ -7,6 +7,7 @@ import { listPullRequests, listReviews, triggerReview } from "../api/projects";
 import { BackButton } from "../components/BackButton";
 import { pageTransition } from "../components/pageTransition";
 import { Spinner } from "../components/Spinner";
+import { TiltCard } from "../components/TiltCard";
 import { useToast } from "../components/Toast";
 import { usePageTitle } from "../hooks/usePageTitle";
 
@@ -111,7 +112,8 @@ export function ProjectDetail() {
 
       <ul className="pull-request-list">
         {pulls?.map((pr, index) => (
-          <motion.li
+          <TiltCard
+            as="li"
             key={pr.number}
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
@@ -132,7 +134,7 @@ export function ProjectDetail() {
             >
               Review this PR
             </button>
-          </motion.li>
+          </TiltCard>
         ))}
       </ul>
 

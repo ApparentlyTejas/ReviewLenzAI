@@ -1,9 +1,11 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import ReactMarkdown from "react-markdown";
 import { ChatStreamError } from "../api/chat";
 import type { ChatMessage } from "../types";
+import { PlusIcon, SendIcon, SparkleIcon } from "./Icons";
 import { useToast } from "./Toast";
 import { Spinner } from "./Spinner";
 
@@ -14,6 +16,7 @@ interface ChatThreadProps {
   queryKey: unknown[];
   listMessages: () => Promise<ChatMessage[]>;
   streamMessage: (content: string, onDelta: (chunk: string) => void, signal?: AbortSignal) => Promise<ChatMessage>;
+  clearMessages: () => Promise<void>;
   /** Set by a parent (e.g. a "Ask about this" button on a finding) to prefill and
    * focus the input. Consumed via onPrefillConsumed so the same value can be set again. */
   prefill?: string | null;
@@ -22,6 +25,8 @@ interface ChatThreadProps {
    * placements outside the review page's two-column sidebar layout. */
   className?: string;
 }
+
+const MAX_TEXTAREA_HEIGHT = 140;
 
 /** The shared streaming-chat UI (message list, markdown rendering, auto-scroll,
  * stop/send) used by both the per-review chat and the dashboard chat — they only
@@ -33,6 +38,7 @@ export function ChatThread({
   queryKey,
   listMessages,
   streamMessage,
+  clearMessages,
   prefill,
   onPrefillConsumed,
   className,
@@ -43,7 +49,7 @@ export function ChatThread({
   const [isStreaming, setIsStreaming] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
 
@@ -65,12 +71,18 @@ export function ChatThread({
     return () => abortRef.current?.abort();
   }, []);
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    const content = input.trim();
-    if (!content || isStreaming) return;
+  function resizeTextarea() {
+    const el = inputRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${Math.min(el.scrollHeight, MAX_TEXTAREA_HEIGHT)}px`;
+  }
 
+  useEffect(resizeTextarea, [input]);
+
+  async function submitQuestion(content: string) {
     setInput("");
+    if (inputRef.current) inputRef.current.style.height = "auto";
     setPendingQuestion(content);
     setStreamingReply("");
     setIsStreaming(true);
@@ -94,62 +106,140 @@ export function ChatThread({
     }
   }
 
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    const content = input.trim();
+    if (!content || isStreaming) return;
+    void submitQuestion(content);
+  }
+
+  function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      const content = input.trim();
+      if (!content || isStreaming) return;
+      void submitQuestion(content);
+    }
+  }
+
   function handleStop() {
     abortRef.current?.abort();
   }
 
+  async function handleNewChat() {
+    try {
+      await clearMessages();
+      await queryClient.invalidateQueries({ queryKey });
+    } catch {
+      toast("Failed to clear chat. Please try again.", "error");
+    }
+  }
+
+  const hasHistory = !!messages && messages.length > 0;
+
   return (
     <div className={`chat-panel${className ? ` ${className}` : ""}`}>
-      <h2>{title}</h2>
+      <div className="chat-panel-header">
+        <h2>
+          <SparkleIcon size={15} />
+          {title}
+        </h2>
+        {hasHistory && !isStreaming && (
+          <button
+            type="button"
+            className="secondary small chat-new-button"
+            onClick={handleNewChat}
+            aria-label="New chat"
+            title="New chat"
+          >
+            <PlusIcon size={14} />
+            New chat
+          </button>
+        )}
+      </div>
 
       {isLoading ? (
         <Spinner label="Loading chat..." />
       ) : (
         <div className="chat-messages">
           {messages && messages.length === 0 && !pendingQuestion && <p className="chat-empty">{emptyHint}</p>}
-          {messages?.map((message) => (
-            <div key={message.id} className={`chat-message chat-message-${message.role}`}>
-              <span className="chat-message-role">{message.role === "user" ? "You" : "Assistant"}</span>
-              <ChatMarkdown content={message.content} />
-            </div>
-          ))}
-          {pendingQuestion && (
-            <div className="chat-message chat-message-user">
-              <span className="chat-message-role">You</span>
-              <p>{pendingQuestion}</p>
-            </div>
-          )}
-          {isStreaming && (
-            <div className="chat-message chat-message-assistant chat-message-pending">
-              <span className="chat-message-role">Assistant</span>
-              {streamingReply ? <ChatMarkdown content={streamingReply} /> : <p className="chat-thinking">Thinking...</p>}
-            </div>
-          )}
+          <AnimatePresence initial={false}>
+            {messages?.map((message) => (
+              <ChatBubble key={message.id} role={message.role}>
+                <ChatMarkdown content={message.content} />
+              </ChatBubble>
+            ))}
+            {pendingQuestion && (
+              <ChatBubble role="user">
+                <p>{pendingQuestion}</p>
+              </ChatBubble>
+            )}
+            {isStreaming && (
+              <ChatBubble role="assistant" pending>
+                {streamingReply ? <ChatMarkdown content={streamingReply} /> : <TypingDots />}
+              </ChatBubble>
+            )}
+          </AnimatePresence>
           <div ref={messagesEndRef} />
         </div>
       )}
 
       <form className="chat-input-row" onSubmit={handleSubmit}>
-        <input
+        <textarea
           ref={inputRef}
-          type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
+          onKeyDown={handleKeyDown}
           placeholder={placeholder}
           disabled={isStreaming}
           maxLength={2000}
+          rows={1}
         />
         {isStreaming ? (
-          <button type="button" className="secondary" onClick={handleStop}>
-            Stop
+          <button type="button" className="chat-send-button chat-stop-button" onClick={handleStop} aria-label="Stop">
+            <span className="chat-stop-icon" />
           </button>
         ) : (
-          <button type="submit" disabled={!input.trim()}>
-            Send
+          <button type="submit" className="chat-send-button" disabled={!input.trim()} aria-label="Send">
+            <SendIcon size={16} />
           </button>
         )}
       </form>
     </div>
+  );
+}
+
+function ChatBubble({
+  role,
+  pending,
+  children,
+}: {
+  role: "user" | "assistant";
+  pending?: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <motion.div
+      className={`chat-message chat-message-${role}${pending ? " chat-message-pending" : ""}`}
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+    >
+      <span className="chat-avatar" aria-hidden="true">
+        {role === "user" ? "You" : <SparkleIcon size={13} />}
+      </span>
+      <div className="chat-bubble-content">{children}</div>
+    </motion.div>
+  );
+}
+
+function TypingDots() {
+  return (
+    <span className="chat-typing-dots" aria-label="Assistant is typing">
+      <span />
+      <span />
+      <span />
+    </span>
   );
 }
 

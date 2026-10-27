@@ -88,3 +88,30 @@ export function ChevronLeftIcon({ size = 16 }: { size?: number }) {
     </svg>
   );
 }
+
+export function SendIcon({ size = 16 }: { size?: number }) {
+  return (
+    <svg {...ICON_PROPS} width={size} height={size}>
+      <path d="M12 19V5" />
+      <path d="m6 11 6-6 6 6" />
+    </svg>
+  );
+}
+
+export function PlusIcon({ size = 16 }: { size?: number }) {
+  return (
+    <svg {...ICON_PROPS} width={size} height={size}>
+      <path d="M12 5v14" />
+      <path d="M5 12h14" />
+    </svg>
+  );
+}
+
+export function SparkleIcon({ size = 16 }: { size?: number }) {
+  return (
+    <svg {...ICON_PROPS} width={size} height={size}>
+      <path d="M12 3v4M12 17v4M3 12h4M17 12h4" />
+      <path d="M12 8.5 13.3 11l2.5 1.3-2.5 1.3L12 16l-1.3-2.4L8.2 12.3l2.5-1.3L12 8.5Z" />
+    </svg>
+  );
+}

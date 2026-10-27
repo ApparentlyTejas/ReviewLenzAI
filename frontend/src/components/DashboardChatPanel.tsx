@@ -1,4 +1,4 @@
-import { listDashboardChatMessages, streamDashboardChatMessage } from "../api/dashboardChat";
+import { clearDashboardChatMessages, listDashboardChatMessages, streamDashboardChatMessage } from "../api/dashboardChat";
 import { ChatThread } from "./ChatThread";
 
 export function DashboardChatPanel() {
@@ -16,6 +16,7 @@ export function DashboardChatPanel() {
       queryKey={["dashboard-chat"]}
       listMessages={listDashboardChatMessages}
       streamMessage={(content, onDelta, signal) => streamDashboardChatMessage(content, onDelta, signal)}
+      clearMessages={clearDashboardChatMessages}
     />
   );
 }

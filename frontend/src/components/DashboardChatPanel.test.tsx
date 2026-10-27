@@ -8,6 +8,7 @@ import { ToastProvider } from "./Toast";
 vi.mock("../api/dashboardChat", () => ({
   listDashboardChatMessages: vi.fn(),
   streamDashboardChatMessage: vi.fn(),
+  clearDashboardChatMessages: vi.fn(),
 }));
 
 import { listDashboardChatMessages, streamDashboardChatMessage } from "../api/dashboardChat";
