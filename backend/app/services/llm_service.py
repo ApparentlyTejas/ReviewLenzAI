@@ -7,14 +7,14 @@ import groq
 from app.core.config import settings
 from app.schemas.review import ReviewFindings
 
-MODEL_NAME = "llama-3.3-70b-versatile"
-# Plain-text follow-up chat doesn't need review_diff()'s strict tool-call schema, so it
-# isn't tied to MODEL_NAME: llama-3.3-70b-versatile has been removed from Groq entirely
-# (confirmed via a live API call — review_diff() is currently broken against the real
-# API, a pre-existing issue, not something introduced here). openai/gpt-oss-120b answers
-# plain prompts fine but doesn't reliably follow review_diff()'s exact JSON schema for
-# tool calls, so it's used here only, not as a MODEL_NAME replacement.
-CHAT_MODEL_NAME = "openai/gpt-oss-120b"
+# llama-3.3-70b-versatile was removed from Groq's catalog entirely (confirmed via a
+# live models.list() call). Of the models still available, openai/gpt-oss-120b/20b
+# answer plain prompts fine but don't reliably follow review_diff()'s strict tool-call
+# schema (wrong field names, wrong enum casing). qwen/qwen3.8-27b does, consistently,
+# across clean/security/subtle-bug test diffs, and writes equally good plain prose for
+# chat — so it's used for both rather than juggling two models.
+MODEL_NAME = "qwen/qwen3.8-27b"
+CHAT_MODEL_NAME = MODEL_NAME
 MAX_DIFF_CHARS = 70_000
 
 SYSTEM_PROMPT = """You are a thorough, senior code reviewer. You will be given a unified git diff from \
