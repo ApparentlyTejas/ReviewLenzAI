@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { useParams } from "react-router-dom";
 import { getReview } from "../api/projects";
 import { BackButton } from "../components/BackButton";
+import { ChatPanel } from "../components/ChatPanel";
 import { pageTransition } from "../components/pageTransition";
 import { Spinner } from "../components/Spinner";
 import { sortFindingsBySeverity } from "../lib/severity";
@@ -70,6 +71,7 @@ export function ReviewDetail() {
         ))}
       </ul>
 
+      {review.status === "completed" && <ChatPanel projectId={id} reviewId={rId} />}
     </motion.div>
   );
 }

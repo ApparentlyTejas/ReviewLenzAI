@@ -56,6 +56,15 @@ export interface ReviewSummary {
   finding_count: number;
 }
 
+export type ChatRole = "user" | "assistant";
+
+export interface ChatMessage {
+  id: number;
+  role: ChatRole;
+  content: string;
+  created_at: string;
+}
+
 export interface RecentReview {
   id: number;
   project_id: number;
