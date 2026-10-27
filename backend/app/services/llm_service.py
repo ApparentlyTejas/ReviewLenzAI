@@ -136,32 +136,11 @@ def _format_findings_for_chat(findings: list[dict[str, Any]]) -> str:
     return "\n".join(lines)
 
 
-def stream_chat_answer(
-    *,
-    pr_title: str,
-    pr_number: int,
-    diff_snapshot: str,
-    findings: list[dict[str, Any]],
-    history: list[dict[str, str]],
-    question: str,
-) -> Generator[str, None, None]:
-    """Answer a follow-up question about a review, grounded in its diff and findings,
-    yielding the answer as text deltas as they arrive from the model.
-
-    `history` is prior chat turns as [{"role": "user"|"assistant", "content": ...}], oldest first.
-    """
+def _stream_groq_chat(messages: list[dict[str, str]]) -> Generator[str, None, None]:
+    """Shared streaming + one-retry-on-transient-error logic for any plain (non
+    tool-calling) chat completion. Yields text deltas; raises LLMReviewError on
+    failure, including "finished with no content at all"."""
     client = groq.Groq(api_key=settings.groq_api_key)
-
-    system_prompt = CHAT_SYSTEM_PROMPT_TEMPLATE.format(
-        pr_title=pr_title,
-        pr_number=pr_number,
-        diff_snapshot=_truncate_diff(diff_snapshot),
-        findings_text=_format_findings_for_chat(findings),
-    )
-
-    messages = [{"role": "system", "content": system_prompt}]
-    messages.extend(history[-MAX_CHAT_HISTORY_MESSAGES:])
-    messages.append({"role": "user", "content": question})
 
     request_kwargs: dict[str, Any] = dict(
         model=CHAT_MODEL_NAME,
@@ -193,3 +172,58 @@ def stream_chat_answer(
 
     if not got_any_content:
         raise LLMReviewError("Groq response did not include any content")
+
+
+def stream_chat_answer(
+    *,
+    pr_title: str,
+    pr_number: int,
+    diff_snapshot: str,
+    findings: list[dict[str, Any]],
+    history: list[dict[str, str]],
+    question: str,
+) -> Generator[str, None, None]:
+    """Answer a follow-up question about a review, grounded in its diff and findings,
+    yielding the answer as text deltas as they arrive from the model.
+
+    `history` is prior chat turns as [{"role": "user"|"assistant", "content": ...}], oldest first.
+    """
+    system_prompt = CHAT_SYSTEM_PROMPT_TEMPLATE.format(
+        pr_title=pr_title,
+        pr_number=pr_number,
+        diff_snapshot=_truncate_diff(diff_snapshot),
+        findings_text=_format_findings_for_chat(findings),
+    )
+
+    messages = [{"role": "system", "content": system_prompt}]
+    messages.extend(history[-MAX_CHAT_HISTORY_MESSAGES:])
+    messages.append({"role": "user", "content": question})
+
+    yield from _stream_groq_chat(messages)
+
+
+DASHBOARD_SYSTEM_PROMPT_TEMPLATE = """You are an assistant inside a code review dashboard, answering \
+questions about the user's connected repositories, reviews, and findings. Answer ONLY using the \
+summary below — if asked about something not in it (e.g. a repo that isn't connected, or data older \
+than what's shown), say so instead of guessing.
+
+{context}
+
+Keep answers concise and concrete. Reference specific repos, PR numbers, and file paths when relevant."""
+
+
+def stream_dashboard_answer(
+    *,
+    context: str,
+    history: list[dict[str, str]],
+    question: str,
+) -> Generator[str, None, None]:
+    """Answer a question about the user's overall dashboard (all their projects,
+    reviews, and findings), grounded in a pre-built text summary of that data."""
+    system_prompt = DASHBOARD_SYSTEM_PROMPT_TEMPLATE.format(context=context)
+
+    messages = [{"role": "system", "content": system_prompt}]
+    messages.extend(history[-MAX_CHAT_HISTORY_MESSAGES:])
+    messages.append({"role": "user", "content": question})
+
+    yield from _stream_groq_chat(messages)

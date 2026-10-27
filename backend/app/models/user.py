@@ -7,6 +7,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.core.database import Base
 
 if TYPE_CHECKING:
+    from app.models.dashboard_chat_message import DashboardChatMessage
     from app.models.project import Project
 
 
@@ -26,3 +27,6 @@ class User(Base):
         return bool(self.github_access_token)
 
     projects: Mapped[list["Project"]] = relationship(back_populates="user", cascade="all, delete-orphan")
+    dashboard_chat_messages: Mapped[list["DashboardChatMessage"]] = relationship(
+        back_populates="user", cascade="all, delete-orphan", order_by="DashboardChatMessage.id"
+    )

@@ -7,9 +7,9 @@ from sqlalchemy.pool import StaticPool
 from app.core.database import Base, get_db
 from app.core.limiter import limiter
 from app.core.security import hash_password
+from app.core.streaming import get_session_factory
 from app.main import app
 from app.models.user import User as UserModel
-from app.routers.chat import get_session_factory
 
 limiter.enabled = False
 

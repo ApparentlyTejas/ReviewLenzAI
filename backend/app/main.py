@@ -13,7 +13,7 @@ from app import models  # noqa: F401 — register models with Base before create
 from app.core.config import settings
 from app.core.database import Base, engine, get_db
 from app.core.limiter import limiter
-from app.routers import auth, chat, dashboard, github, projects, reviews
+from app.routers import auth, chat, dashboard, dashboard_chat, github, projects, reviews
 
 
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
@@ -64,6 +64,7 @@ app.include_router(projects.router)
 app.include_router(reviews.router)
 app.include_router(chat.router)
 app.include_router(dashboard.router)
+app.include_router(dashboard_chat.router)
 
 
 @app.get("/health")

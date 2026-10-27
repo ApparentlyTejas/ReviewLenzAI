@@ -1,4 +1,3 @@
-import json
 from collections.abc import Callable, Generator
 from typing import Any
 
@@ -6,8 +5,9 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
-from app.core.database import SessionLocal, get_db
+from app.core.database import get_db
 from app.core.limiter import limiter
+from app.core.streaming import get_session_factory, sse_event
 from app.models.chat_message import ChatMessage, ChatRole
 from app.models.project import Project
 from app.models.review import Review
@@ -17,19 +17,6 @@ from app.schemas.chat import ChatMessageCreate, ChatMessageOut
 from app.services.llm_service import LLMReviewError, stream_chat_answer
 
 router = APIRouter(prefix="/projects/{project_id}/reviews/{review_id}/chat", tags=["chat"])
-
-
-def _sse(event_type: str, **data: object) -> str:
-    return f"data: {json.dumps({'type': event_type, **data})}\n\n"
-
-
-def get_session_factory() -> Callable[[], Session]:
-    """A dependency wrapping SessionLocal itself (not a session), resolved while the
-    route's other dependencies are still alive, so it can be overridden in tests the
-    same way get_db is — unlike get_db, this one is handed to the streaming generator
-    to open its own session much later, after the route function has already returned.
-    """
-    return SessionLocal
 
 
 def _get_owned_review(db: Session, project_id: int, review_id: int, user: User) -> Review:
@@ -93,11 +80,11 @@ def _stream_chat_response(
                 question=question,
             ):
                 accumulated.append(delta)
-                yield _sse("delta", content=delta)
+                yield sse_event("delta", content=delta)
         except LLMReviewError as exc:
             db.delete(user_message)
             db.commit()
-            yield _sse("error", detail=str(exc))
+            yield sse_event("error", detail=str(exc))
             return
 
         assistant_message = ChatMessage(review_id=review_id, role=ChatRole.assistant, content="".join(accumulated))
@@ -105,7 +92,7 @@ def _stream_chat_response(
         db.commit()
         db.refresh(assistant_message)
 
-        yield _sse(
+        yield sse_event(
             "done",
             message={
                 "id": assistant_message.id,
