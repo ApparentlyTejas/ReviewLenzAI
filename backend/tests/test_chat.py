@@ -1,3 +1,4 @@
+import json
 from unittest.mock import patch
 
 from app.schemas.review import ReviewFindings
@@ -26,13 +27,31 @@ def _create_completed_review(client, headers, project_id, findings=None):
     return resp.json()["id"]
 
 
-@patch(f"{_CHAT_PATCH_TARGET}.answer_chat_question")
-def test_send_chat_message_persists_both_turns_and_returns_assistant_reply(mock_answer, client):
+def _sse_events(response_text: str) -> list[dict]:
+    events = []
+    for frame in response_text.split("\n\n"):
+        frame = frame.strip()
+        if not frame:
+            continue
+        assert frame.startswith("data: ")
+        events.append(json.loads(frame[len("data: ") :]))
+    return events
+
+
+def _fake_stream(*chunks: str):
+    def _generator(**kwargs):
+        yield from chunks
+
+    return _generator
+
+
+@patch(f"{_CHAT_PATCH_TARGET}.stream_chat_answer")
+def test_send_chat_message_streams_deltas_then_persists_both_turns(mock_stream, client):
     headers = _register_and_login(client, "chat1@example.com")
     project_id = _create_project(client, headers)
     review_id = _create_completed_review(client, headers, project_id)
 
-    mock_answer.return_value = "The diff looks fine overall."
+    mock_stream.side_effect = _fake_stream("The diff ", "looks fine ", "overall.")
 
     response = client.post(
         f"/projects/{project_id}/reviews/{review_id}/chat",
@@ -40,39 +59,45 @@ def test_send_chat_message_persists_both_turns_and_returns_assistant_reply(mock_
         headers=headers,
     )
 
-    assert response.status_code == 201
-    body = response.json()
-    assert body["role"] == "assistant"
-    assert body["content"] == "The diff looks fine overall."
+    assert response.status_code == 200
+    events = _sse_events(response.text)
+    deltas = [e["content"] for e in events if e["type"] == "delta"]
+    assert deltas == ["The diff ", "looks fine ", "overall."]
+
+    done_events = [e for e in events if e["type"] == "done"]
+    assert len(done_events) == 1
+    assert done_events[0]["message"]["role"] == "assistant"
+    assert done_events[0]["message"]["content"] == "The diff looks fine overall."
 
     history = client.get(f"/projects/{project_id}/reviews/{review_id}/chat", headers=headers).json()
     assert len(history) == 2
     assert history[0]["role"] == "user"
     assert history[0]["content"] == "Is this diff safe to merge?"
     assert history[1]["role"] == "assistant"
+    assert history[1]["content"] == "The diff looks fine overall."
 
 
-@patch(f"{_CHAT_PATCH_TARGET}.answer_chat_question")
-def test_send_chat_message_passes_prior_history_to_llm(mock_answer, client):
+@patch(f"{_CHAT_PATCH_TARGET}.stream_chat_answer")
+def test_send_chat_message_passes_prior_history_to_llm(mock_stream, client):
     headers = _register_and_login(client, "chat2@example.com")
     project_id = _create_project(client, headers)
     review_id = _create_completed_review(client, headers, project_id)
 
-    mock_answer.return_value = "First answer"
+    mock_stream.side_effect = _fake_stream("First answer")
     client.post(
         f"/projects/{project_id}/reviews/{review_id}/chat",
         json={"content": "First question"},
         headers=headers,
     )
 
-    mock_answer.return_value = "Second answer"
+    mock_stream.side_effect = _fake_stream("Second answer")
     client.post(
         f"/projects/{project_id}/reviews/{review_id}/chat",
         json={"content": "Second question"},
         headers=headers,
     )
 
-    second_call_kwargs = mock_answer.call_args.kwargs
+    second_call_kwargs = mock_stream.call_args.kwargs
     assert second_call_kwargs["question"] == "Second question"
     assert second_call_kwargs["history"] == [
         {"role": "user", "content": "First question"},
@@ -80,13 +105,18 @@ def test_send_chat_message_passes_prior_history_to_llm(mock_answer, client):
     ]
 
 
-@patch(f"{_CHAT_PATCH_TARGET}.answer_chat_question")
-def test_send_chat_message_llm_failure_does_not_persist_user_message(mock_answer, client):
+@patch(f"{_CHAT_PATCH_TARGET}.stream_chat_answer")
+def test_send_chat_message_llm_failure_does_not_persist_user_message(mock_stream, client):
     headers = _register_and_login(client, "chat3@example.com")
     project_id = _create_project(client, headers)
     review_id = _create_completed_review(client, headers, project_id)
 
-    mock_answer.side_effect = LLMReviewError("Groq API call failed: boom")
+    def _failing_generator(**kwargs):
+        if False:
+            yield ""
+        raise LLMReviewError("Groq API call failed: boom")
+
+    mock_stream.side_effect = _failing_generator
 
     response = client.post(
         f"/projects/{project_id}/reviews/{review_id}/chat",
@@ -94,7 +124,36 @@ def test_send_chat_message_llm_failure_does_not_persist_user_message(mock_answer
         headers=headers,
     )
 
-    assert response.status_code == 502
+    assert response.status_code == 200
+    events = _sse_events(response.text)
+    assert events[-1]["type"] == "error"
+    assert "boom" in events[-1]["detail"]
+
+    history = client.get(f"/projects/{project_id}/reviews/{review_id}/chat", headers=headers).json()
+    assert history == []
+
+
+@patch(f"{_CHAT_PATCH_TARGET}.stream_chat_answer")
+def test_send_chat_message_llm_failure_after_partial_content_keeps_deltas_but_not_message(mock_stream, client):
+    headers = _register_and_login(client, "chat3b@example.com")
+    project_id = _create_project(client, headers)
+    review_id = _create_completed_review(client, headers, project_id)
+
+    def _partial_then_failing_generator(**kwargs):
+        yield "Partial answer "
+        raise LLMReviewError("Groq streaming failed: connection dropped")
+
+    mock_stream.side_effect = _partial_then_failing_generator
+
+    response = client.post(
+        f"/projects/{project_id}/reviews/{review_id}/chat",
+        json={"content": "Will this fail partway?"},
+        headers=headers,
+    )
+
+    events = _sse_events(response.text)
+    assert [e["content"] for e in events if e["type"] == "delta"] == ["Partial answer "]
+    assert events[-1]["type"] == "error"
 
     history = client.get(f"/projects/{project_id}/reviews/{review_id}/chat", headers=headers).json()
     assert history == []

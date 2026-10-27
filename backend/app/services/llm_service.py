@@ -1,4 +1,5 @@
 import json
+from collections.abc import Generator
 from typing import Any
 
 import groq
@@ -125,26 +126,27 @@ relevant."""
 MAX_CHAT_HISTORY_MESSAGES = 20
 
 
-def _format_findings_for_chat(findings: list[Any]) -> str:
+def _format_findings_for_chat(findings: list[dict[str, Any]]) -> str:
     if not findings:
         return "(none — the diff was clean)"
     lines = []
     for f in findings:
-        location = f.file_path + (f":{f.line_number}" if f.line_number else "")
-        lines.append(f"- [{f.severity}/{f.category}] {location}: {f.message}")
+        location = f["file_path"] + (f":{f['line_number']}" if f.get("line_number") else "")
+        lines.append(f"- [{f['severity']}/{f['category']}] {location}: {f['message']}")
     return "\n".join(lines)
 
 
-def answer_chat_question(
+def stream_chat_answer(
     *,
     pr_title: str,
     pr_number: int,
     diff_snapshot: str,
-    findings: list[Any],
+    findings: list[dict[str, Any]],
     history: list[dict[str, str]],
     question: str,
-) -> str:
-    """Answer a follow-up question about a review, grounded in its diff and findings.
+) -> Generator[str, None, None]:
+    """Answer a follow-up question about a review, grounded in its diff and findings,
+    yielding the answer as text deltas as they arrive from the model.
 
     `history` is prior chat turns as [{"role": "user"|"assistant", "content": ...}], oldest first.
     """
@@ -166,19 +168,28 @@ def answer_chat_question(
         max_tokens=1024,
         temperature=0.2,
         messages=messages,
+        stream=True,
     )
 
     try:
-        response = client.chat.completions.create(**request_kwargs)
+        stream = client.chat.completions.create(**request_kwargs)
     except (groq.RateLimitError, groq.APIConnectionError):
         try:
-            response = client.chat.completions.create(**request_kwargs)
+            stream = client.chat.completions.create(**request_kwargs)
         except groq.APIError as exc:
             raise LLMReviewError(f"Groq API call failed after retry: {exc}") from exc
     except groq.APIError as exc:
         raise LLMReviewError(f"Groq API call failed: {exc}") from exc
 
-    content = response.choices[0].message.content
-    if not content:
-        raise LLMReviewError("Groq response did not include a message")
-    return content
+    got_any_content = False
+    try:
+        for chunk in stream:
+            delta = chunk.choices[0].delta.content
+            if delta:
+                got_any_content = True
+                yield delta
+    except groq.APIError as exc:
+        raise LLMReviewError(f"Groq streaming failed: {exc}") from exc
+
+    if not got_any_content:
+        raise LLMReviewError("Groq response did not include any content")

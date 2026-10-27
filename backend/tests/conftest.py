@@ -9,6 +9,7 @@ from app.core.limiter import limiter
 from app.core.security import hash_password
 from app.main import app
 from app.models.user import User as UserModel
+from app.routers.chat import get_session_factory
 
 limiter.enabled = False
 
@@ -47,6 +48,7 @@ def _override_get_db():
 
 
 app.dependency_overrides[get_db] = _override_get_db
+app.dependency_overrides[get_session_factory] = lambda: TestingSessionLocal
 
 
 @pytest.fixture(autouse=True)
