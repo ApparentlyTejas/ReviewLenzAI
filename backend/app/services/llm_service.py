@@ -7,6 +7,13 @@ from app.core.config import settings
 from app.schemas.review import ReviewFindings
 
 MODEL_NAME = "llama-3.3-70b-versatile"
+# Plain-text follow-up chat doesn't need review_diff()'s strict tool-call schema, so it
+# isn't tied to MODEL_NAME: llama-3.3-70b-versatile has been removed from Groq entirely
+# (confirmed via a live API call — review_diff() is currently broken against the real
+# API, a pre-existing issue, not something introduced here). openai/gpt-oss-120b answers
+# plain prompts fine but doesn't reliably follow review_diff()'s exact JSON schema for
+# tool calls, so it's used here only, not as a MODEL_NAME replacement.
+CHAT_MODEL_NAME = "openai/gpt-oss-120b"
 MAX_DIFF_CHARS = 70_000
 
 SYSTEM_PROMPT = """You are a thorough, senior code reviewer. You will be given a unified git diff from \
@@ -98,3 +105,80 @@ def review_diff(diff_text: str) -> tuple[ReviewFindings, str]:
         raise LLMReviewError(f"Groq response failed schema validation: {exc}") from exc
 
     return findings, diff_snapshot
+
+
+CHAT_SYSTEM_PROMPT_TEMPLATE = """You are a senior code reviewer answering follow-up questions about a \
+specific pull request you already reviewed. Answer ONLY using the diff and findings below — if the \
+question asks about something not shown in them, say so instead of guessing.
+
+PR: {pr_title} (#{pr_number})
+
+Diff reviewed:
+{diff_snapshot}
+
+Findings already reported:
+{findings_text}
+
+Keep answers concise and concrete. Reference file paths and line numbers from the diff/findings when \
+relevant."""
+
+MAX_CHAT_HISTORY_MESSAGES = 20
+
+
+def _format_findings_for_chat(findings: list[Any]) -> str:
+    if not findings:
+        return "(none — the diff was clean)"
+    lines = []
+    for f in findings:
+        location = f.file_path + (f":{f.line_number}" if f.line_number else "")
+        lines.append(f"- [{f.severity}/{f.category}] {location}: {f.message}")
+    return "\n".join(lines)
+
+
+def answer_chat_question(
+    *,
+    pr_title: str,
+    pr_number: int,
+    diff_snapshot: str,
+    findings: list[Any],
+    history: list[dict[str, str]],
+    question: str,
+) -> str:
+    """Answer a follow-up question about a review, grounded in its diff and findings.
+
+    `history` is prior chat turns as [{"role": "user"|"assistant", "content": ...}], oldest first.
+    """
+    client = groq.Groq(api_key=settings.groq_api_key)
+
+    system_prompt = CHAT_SYSTEM_PROMPT_TEMPLATE.format(
+        pr_title=pr_title,
+        pr_number=pr_number,
+        diff_snapshot=_truncate_diff(diff_snapshot),
+        findings_text=_format_findings_for_chat(findings),
+    )
+
+    messages = [{"role": "system", "content": system_prompt}]
+    messages.extend(history[-MAX_CHAT_HISTORY_MESSAGES:])
+    messages.append({"role": "user", "content": question})
+
+    request_kwargs: dict[str, Any] = dict(
+        model=CHAT_MODEL_NAME,
+        max_tokens=1024,
+        temperature=0.2,
+        messages=messages,
+    )
+
+    try:
+        response = client.chat.completions.create(**request_kwargs)
+    except (groq.RateLimitError, groq.APIConnectionError):
+        try:
+            response = client.chat.completions.create(**request_kwargs)
+        except groq.APIError as exc:
+            raise LLMReviewError(f"Groq API call failed after retry: {exc}") from exc
+    except groq.APIError as exc:
+        raise LLMReviewError(f"Groq API call failed: {exc}") from exc
+
+    content = response.choices[0].message.content
+    if not content:
+        raise LLMReviewError("Groq response did not include a message")
+    return content

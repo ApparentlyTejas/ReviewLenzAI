@@ -9,6 +9,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.core.database import Base
 
 if TYPE_CHECKING:
+    from app.models.chat_message import ChatMessage
     from app.models.finding import Finding
     from app.models.project import Project
 
@@ -37,3 +38,6 @@ class Review(Base):
 
     project: Mapped["Project"] = relationship(back_populates="reviews")
     findings: Mapped[list["Finding"]] = relationship(back_populates="review", cascade="all, delete-orphan")
+    chat_messages: Mapped[list["ChatMessage"]] = relationship(
+        back_populates="review", cascade="all, delete-orphan", order_by="ChatMessage.id"
+    )
