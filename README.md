@@ -98,6 +98,9 @@ The Vercel → Render proxy keeps auth cookies first-party and eliminates CORS e
 - **Severity ranking** critical → high → medium → low, with visual indicators and a severity breakdown bar
 - **Full history** every review run is stored; browse all past findings per repo
 - **Dashboard** stat cards, activity feed, and per-repo review history
+- **Ask about a review** streaming chat grounded in that PR's diff and findings — ask follow-up questions, jump straight to a specific finding with one click
+- **Ask about your repos** a second chat on the dashboard, grounded across every connected repo's reviews and findings, for questions that span more than one PR
+- **Delete & sort** remove a repo or a stale review; sort review history by date/status/finding count and repos by name or recency
 - **Multi-user** each user only sees their own repos and reviews
 - **Password strength enforcement** 8+ chars, uppercase, lowercase, number, special character required at registration
 
