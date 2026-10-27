@@ -225,3 +225,59 @@ def test_get_review_unknown_id_returns_404(client):
     response = client.get(f"/projects/{project_id}/reviews/999999", headers=headers)
 
     assert response.status_code == 404
+
+
+@patch(f"{_REVIEWS_PATCH_TARGET}.send_review_ready_email")
+@patch(f"{_REVIEWS_PATCH_TARGET}.review_diff")
+@patch(f"{_REVIEWS_PATCH_TARGET}.github_service.get_pull_request_diff")
+@patch(f"{_REVIEWS_PATCH_TARGET}.github_service.get_pull_request")
+def test_delete_review_removes_it_and_its_findings(
+    mock_get_pr, mock_get_diff, mock_review_diff, mock_send_email, client
+):
+    headers = _register_and_login(client, "deleter1@example.com")
+    project_id = _create_project(client, headers)
+    mock_get_pr.return_value = _fake_pr()
+    mock_get_diff.return_value = "diff"
+    mock_review_diff.return_value = (
+        ReviewFindings.model_validate(
+            {"findings": [{"category": "bug", "severity": "low", "file_path": "a.py", "message": "x"}]}
+        ),
+        "diff",
+    )
+
+    create_resp = client.post(f"/projects/{project_id}/reviews", json={"pr_number": 7}, headers=headers)
+    review_id = create_resp.json()["id"]
+
+    delete_resp = client.delete(f"/projects/{project_id}/reviews/{review_id}", headers=headers)
+    assert delete_resp.status_code == 204
+
+    get_resp = client.get(f"/projects/{project_id}/reviews/{review_id}", headers=headers)
+    assert get_resp.status_code == 404
+
+    list_resp = client.get(f"/projects/{project_id}/reviews", headers=headers)
+    assert list_resp.json() == []
+
+
+def test_delete_review_unknown_id_returns_404(client):
+    headers = _register_and_login(client, "deleter2@example.com")
+    project_id = _create_project(client, headers)
+
+    response = client.delete(f"/projects/{project_id}/reviews/999999", headers=headers)
+
+    assert response.status_code == 404
+
+
+@patch(f"{_REVIEWS_PATCH_TARGET}.github_service.get_pull_request")
+def test_delete_review_on_other_users_project_returns_404(mock_get_pr, client):
+    headers_a = _register_and_login(client, "deleter-owner@example.com")
+    headers_b = _register_and_login(client, "deleter-intruder@example.com")
+    project_id = _create_project(client, headers_a)
+
+    response = client.delete(f"/projects/{project_id}/reviews/1", headers=headers_b)
+
+    assert response.status_code == 404
+
+
+def test_delete_review_requires_auth(client):
+    response = client.delete("/projects/1/reviews/1")
+    assert response.status_code == 401
