@@ -920,8 +920,8 @@ button.danger:hover:not(:disabled) {
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  padding: 3px 8px;
-  border-radius: 4px;
+  padding: 3px 9px;
+  border-radius: 999px;
   background: var(--code-bg);
   color: var(--text);
 }
