@@ -271,6 +271,22 @@ h2 {
   margin: 0 0 24px;
 }
 
+.auth-status-icon {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 18px;
+}
+
+.auth-status-icon .spinner-row {
+  justify-content: center;
+}
+
+.auth-status-icon .spinner {
+  width: 40px;
+  height: 40px;
+  border-width: 3px;
+}
+
 .auth-glass form {
   display: flex;
   flex-direction: column;

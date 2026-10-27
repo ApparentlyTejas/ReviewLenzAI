@@ -115,3 +115,22 @@ export function SparkleIcon({ size = 16 }: { size?: number }) {
     </svg>
   );
 }
+
+export function CheckCircleIcon({ size = 40 }: { size?: number }) {
+  return (
+    <svg {...ICON_PROPS} width={size} height={size}>
+      <circle cx="12" cy="12" r="9.5" />
+      <path d="m8 12.5 2.5 2.5L16 9.5" />
+    </svg>
+  );
+}
+
+export function AlertCircleIcon({ size = 40 }: { size?: number }) {
+  return (
+    <svg {...ICON_PROPS} width={size} height={size}>
+      <circle cx="12" cy="12" r="9.5" />
+      <path d="M12 7.5v6" />
+      <path d="M12 16.8v.1" />
+    </svg>
+  );
+}
