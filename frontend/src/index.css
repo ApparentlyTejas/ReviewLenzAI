@@ -580,6 +580,17 @@ button.small {
   margin-top: 0;
 }
 
+.chat-panel-dashboard {
+  position: static;
+  max-height: none;
+  margin-bottom: 28px;
+}
+
+.chat-panel-dashboard .chat-messages {
+  max-height: 320px;
+  min-height: 0;
+}
+
 .chat-messages {
   display: flex;
   flex-direction: column;

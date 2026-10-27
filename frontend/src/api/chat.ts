@@ -21,30 +21,27 @@ type ChatSSEEvent =
   | { type: "done"; message: ChatMessage }
   | { type: "error"; detail: string };
 
-/** Sends a chat question and streams the assistant's reply token-by-token via SSE,
- * calling onDelta as each chunk arrives. Resolves with the final persisted message. */
-export async function streamChatMessage(
-  projectId: number,
-  reviewId: number,
+/** POSTs a chat question to `path` and streams the assistant's reply token-by-token
+ * via SSE, calling onDelta as each chunk arrives. Resolves with the final persisted
+ * message. Shared by both the per-review chat and the dashboard chat clients. */
+export async function streamSSEChat(
+  path: string,
   content: string,
   onDelta: (chunk: string) => void,
   signal?: AbortSignal,
 ): Promise<ChatMessage> {
-  const response = await fetch(
-    `${API_BASE_URL}/projects/${projectId}/reviews/${reviewId}/chat`,
-    {
-      method: "POST",
-      credentials: "include",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ content }),
-      signal,
-    },
-  );
+  const response = await fetch(`${API_BASE_URL}${path}`, {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ content }),
+    signal,
+  });
 
   if (!response.ok) {
     let detail = `Request failed (${response.status})`;
     if (response.status === 429) {
-      detail = "You've hit the hourly question limit for this review. Try again later.";
+      detail = "You've hit the hourly question limit. Try again later.";
     } else {
       try {
         const body = await response.json();
@@ -88,4 +85,14 @@ export async function streamChatMessage(
   }
 
   throw new ChatStreamError("Connection closed before the response finished.");
+}
+
+export async function streamChatMessage(
+  projectId: number,
+  reviewId: number,
+  content: string,
+  onDelta: (chunk: string) => void,
+  signal?: AbortSignal,
+): Promise<ChatMessage> {
+  return streamSSEChat(`/projects/${projectId}/reviews/${reviewId}/chat`, content, onDelta, signal);
 }

@@ -10,6 +10,7 @@ import { listGitHubRepos, createProjectFromGitHub } from "../api/github";
 import { GitHubLoginButton } from "../components/GitHubLoginButton";
 import { RepoPicker } from "../components/RepoPicker";
 import { ChevronRightIcon } from "../components/Icons";
+import { DashboardChatPanel } from "../components/DashboardChatPanel";
 import { pageTransition } from "../components/pageTransition";
 import { Spinner } from "../components/Spinner";
 import { useToast } from "../components/Toast";
@@ -197,6 +198,8 @@ export function ProjectList() {
           ))}
         </div>
       )}
+
+      <DashboardChatPanel />
 
       <div className="dashboard-grid">
         <section className="dashboard-main" id="section-activity">
