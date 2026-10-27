@@ -43,8 +43,9 @@ export function ReviewDetail() {
         </a>
       </header>
 
-      <p>
-        Status: <strong>{review.status}</strong> &middot; Model: {review.model_used}
+      <p className="review-status-row">
+        <span className={`badge status-${review.status}`}>{review.status}</span>
+        <span className="review-status-date">{new Date(review.created_at).toLocaleString()}</span>
       </p>
 
       {review.status === "failed" && <p className="error">Review failed: {review.error_message}</p>}

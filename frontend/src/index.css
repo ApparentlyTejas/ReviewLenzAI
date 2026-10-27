@@ -178,6 +178,18 @@ h2 {
   margin-bottom: 28px;
 }
 
+.review-status-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 24px;
+}
+
+.review-status-date {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
 .page-subtitle {
   margin: 4px 0 0;
   font-size: 15px;
