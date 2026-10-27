@@ -10,7 +10,7 @@ export function Navbar() {
     <nav className="navbar">
       <Link to="/" className="navbar-brand">
         <Logo size={26} />
-        ReviewLenzAI
+        <span>ReviewLenzAI</span>
       </Link>
       <div className="navbar-links">
         {user && (
@@ -18,7 +18,7 @@ export function Navbar() {
             <span className="navbar-avatar" style={{ background: avatarColor(user.email) }}>
               {avatarInitials(user.email)}
             </span>
-            {user.email}
+            <span className="navbar-user-email">{user.email}</span>
           </span>
         )}
         <button className="secondary" onClick={logout}>

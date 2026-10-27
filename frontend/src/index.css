@@ -125,6 +125,21 @@ a {
   flex-shrink: 0;
 }
 
+@media (max-width: 480px) {
+  .navbar {
+    padding: 0 14px;
+  }
+
+  .navbar-brand span,
+  .navbar-user-email {
+    display: none;
+  }
+
+  .navbar-links {
+    gap: 10px;
+  }
+}
+
 h1 {
   font-size: 32px;
   font-weight: 700;
