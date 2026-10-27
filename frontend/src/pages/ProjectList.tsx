@@ -17,6 +17,7 @@ import { pageTransition } from "../components/pageTransition";
 import { Spinner } from "../components/Spinner";
 import { useToast } from "../components/Toast";
 import { usePageTitle } from "../hooks/usePageTitle";
+import { avatarColor, avatarInitials } from "../lib/avatar";
 import type { FindingSeverity, Project, ReviewStatus } from "../types";
 
 type ProjectSortKey = "recent" | "name";
@@ -54,15 +55,6 @@ function displayName(email: string): string {
   return first.charAt(0).toUpperCase() + first.slice(1);
 }
 
-const AVATAR_PALETTE = ["#7c3aed", "#db2777", "#2563eb", "#ea580c", "#0891b2", "#059669"];
-
-function repoAvatarColor(owner: string): string {
-  return AVATAR_PALETTE[owner.charCodeAt(0) % AVATAR_PALETTE.length];
-}
-
-function repoInitials(owner: string): string {
-  return owner.slice(0, 2).toUpperCase();
-}
 
 function timeAgo(isoDate: string): string {
   const seconds = Math.floor((Date.now() - new Date(isoDate).getTime()) / 1000);
@@ -427,9 +419,9 @@ export function ProjectList() {
                   <Link to={`/projects/${project.id}`}>
                     <span
                       className="repo-avatar"
-                      style={{ background: repoAvatarColor(project.repo_owner) }}
+                      style={{ background: avatarColor(project.repo_owner) }}
                     >
-                      {repoInitials(project.repo_owner)}
+                      {avatarInitials(project.repo_owner)}
                     </span>
                     <span className="project-list-name">
                       {project.repo_owner}/{project.repo_name}

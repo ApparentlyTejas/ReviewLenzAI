@@ -105,6 +105,26 @@ a {
   font-size: 13px;
 }
 
+.navbar-user {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.navbar-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  font-size: 9px;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: 0.02em;
+  flex-shrink: 0;
+}
+
 h1 {
   font-size: 32px;
   font-weight: 700;
