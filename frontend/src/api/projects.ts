@@ -38,3 +38,7 @@ export async function getReview(projectId: number, reviewId: number): Promise<Re
   const { data } = await apiClient.get<Review>(`/projects/${projectId}/reviews/${reviewId}`);
   return data;
 }
+
+export async function deleteReview(projectId: number, reviewId: number): Promise<void> {
+  await apiClient.delete(`/projects/${projectId}/reviews/${reviewId}`);
+}

@@ -12,6 +12,7 @@ import { apiClient } from "./client";
 import {
   createProject,
   deleteProject,
+  deleteReview,
   getReview,
   listProjects,
   listPullRequests,
@@ -64,6 +65,12 @@ describe("projects api", () => {
     mockedDelete.mockResolvedValueOnce({ data: undefined });
     await deleteProject(42);
     expect(mockedDelete).toHaveBeenCalledWith("/projects/42");
+  });
+
+  it("deleteReview calls DELETE on the review path", async () => {
+    mockedDelete.mockResolvedValueOnce({ data: undefined });
+    await deleteReview(1, 7);
+    expect(mockedDelete).toHaveBeenCalledWith("/projects/1/reviews/7");
   });
 
   it("listPullRequests returns the PR list for a project", async () => {

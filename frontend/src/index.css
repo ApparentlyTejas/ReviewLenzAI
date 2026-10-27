@@ -436,6 +436,38 @@ button.small {
   font-size: 13px;
 }
 
+button.danger {
+  background: var(--danger);
+  color: #fff;
+}
+
+button.danger:hover:not(:disabled) {
+  background: #e0352b;
+}
+
+.confirm-delete-group {
+  display: inline-flex;
+  gap: 6px;
+}
+
+.sort-control {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.sort-control select {
+  font: inherit;
+  font-size: 13px;
+  padding: 5px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+}
+
 .error {
   color: var(--danger);
   font-size: 14px;
@@ -471,6 +503,8 @@ button.small {
 }
 
 .project-list li {
+  display: flex;
+  align-items: center;
   border: 1px solid var(--border);
   border-radius: 8px;
   transition: box-shadow 0.2s ease, transform 0.2s ease, border-color 0.2s ease;
@@ -486,9 +520,17 @@ button.small {
   display: flex;
   align-items: center;
   gap: 10px;
+  flex: 1;
+  min-width: 0;
   padding: 12px 14px;
   color: inherit;
   text-decoration: none;
+}
+
+.project-list li .confirm-delete-group,
+.project-list li > button {
+  margin-right: 14px;
+  flex-shrink: 0;
 }
 
 .project-list-icon {

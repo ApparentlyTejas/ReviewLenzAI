@@ -1,31 +1,73 @@
-import { useQuery } from "@tanstack/react-query";
+import { useMemo, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { Link, useParams } from "react-router-dom";
-import { listReviews } from "../api/projects";
+import { deleteReview, listReviews } from "../api/projects";
 import { BackButton } from "../components/BackButton";
+import { ConfirmDeleteButton } from "../components/ConfirmDeleteButton";
 import { pageTransition } from "../components/pageTransition";
 import { Spinner } from "../components/Spinner";
+import { useToast } from "../components/Toast";
+import type { ReviewSummary } from "../types";
+
+type SortKey = "date-desc" | "date-asc" | "findings-desc" | "status";
+
+const SORTERS: Record<SortKey, (a: ReviewSummary, b: ReviewSummary) => number> = {
+  "date-desc": (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+  "date-asc": (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
+  "findings-desc": (a, b) => b.finding_count - a.finding_count,
+  status: (a, b) => a.status.localeCompare(b.status),
+};
 
 export function ReviewHistory() {
   const { projectId } = useParams<{ projectId: string }>();
   const id = Number(projectId);
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const [sortKey, setSortKey] = useState<SortKey>("date-desc");
 
   const { data: reviews, isLoading } = useQuery({
     queryKey: ["reviews", id],
     queryFn: () => listReviews(id),
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: (reviewId: number) => deleteReview(id, reviewId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["reviews", id] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard-summary"] });
+      toast("Review deleted.");
+    },
+    onError: () => toast("Failed to delete review. Please try again.", "error"),
+  });
+
+  const sortedReviews = useMemo(() => {
+    if (!reviews) return reviews;
+    return [...reviews].sort(SORTERS[sortKey]);
+  }, [reviews, sortKey]);
+
   return (
     <motion.div {...pageTransition}>
       <BackButton to={`/projects/${id}`} label="Pull requests" />
       <header className="page-header">
         <h1>Review history</h1>
+        {reviews && reviews.length > 1 && (
+          <label className="sort-control">
+            Sort by
+            <select value={sortKey} onChange={(e) => setSortKey(e.target.value as SortKey)}>
+              <option value="date-desc">Newest first</option>
+              <option value="date-asc">Oldest first</option>
+              <option value="findings-desc">Most findings</option>
+              <option value="status">Status</option>
+            </select>
+          </label>
+        )}
       </header>
 
       {isLoading && <Spinner label="Loading review history..." />}
 
       <ul className="review-history-list">
-        {reviews?.map((review, index) => (
+        {sortedReviews?.map((review, index) => (
           <motion.li
             key={review.id}
             initial={{ opacity: 0, y: 12 }}
@@ -38,11 +80,14 @@ export function ReviewHistory() {
             <span className={`badge status-${review.status}`}>{review.status}</span>
             <span>{review.finding_count} findings</span>
             <span>{new Date(review.created_at).toLocaleString()}</span>
+            <ConfirmDeleteButton
+              onConfirm={() => deleteMutation.mutate(review.id)}
+              disabled={deleteMutation.isPending}
+            />
           </motion.li>
         ))}
         {reviews?.length === 0 && <p>No reviews yet.</p>}
       </ul>
-
     </motion.div>
   );
 }

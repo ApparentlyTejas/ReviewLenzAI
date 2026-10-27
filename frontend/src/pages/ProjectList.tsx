@@ -1,12 +1,13 @@
-import { useState, type FormEvent } from "react";
+import { useMemo, useState, type FormEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { AxiosError } from "axios";
 import { AnimatePresence, motion } from "framer-motion";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import { getDashboardSummary } from "../api/dashboard";
-import { createProject, listProjects } from "../api/projects";
+import { createProject, deleteProject, listProjects } from "../api/projects";
 import { listGitHubRepos, createProjectFromGitHub } from "../api/github";
+import { ConfirmDeleteButton } from "../components/ConfirmDeleteButton";
 import { GitHubLoginButton } from "../components/GitHubLoginButton";
 import { RepoPicker } from "../components/RepoPicker";
 import { ChevronRightIcon } from "../components/Icons";
@@ -15,7 +16,14 @@ import { pageTransition } from "../components/pageTransition";
 import { Spinner } from "../components/Spinner";
 import { useToast } from "../components/Toast";
 import { usePageTitle } from "../hooks/usePageTitle";
-import type { FindingSeverity, ReviewStatus } from "../types";
+import type { FindingSeverity, Project, ReviewStatus } from "../types";
+
+type ProjectSortKey = "recent" | "name";
+
+const PROJECT_SORTERS: Record<ProjectSortKey, (a: Project, b: Project) => number> = {
+  recent: (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+  name: (a, b) => `${a.repo_owner}/${a.repo_name}`.localeCompare(`${b.repo_owner}/${b.repo_name}`),
+};
 
 const SEVERITY_ORDER: FindingSeverity[] = ["critical", "high", "medium", "low"];
 
@@ -83,9 +91,25 @@ export function ProjectList() {
   const [showConnectForm, setShowConnectForm] = useState(false);
   const [connectTab, setConnectTab] = useState<"github" | "manual">("github");
   const [selectedRepo, setSelectedRepo] = useState("");
+  const [projectSortKey, setProjectSortKey] = useState<ProjectSortKey>("recent");
 
   const hasNoProjects = projects?.length === 0;
   const isFormOpen = showConnectForm || hasNoProjects;
+
+  const sortedProjects = useMemo(() => {
+    if (!projects) return projects;
+    return [...projects].sort(PROJECT_SORTERS[projectSortKey]);
+  }, [projects, projectSortKey]);
+
+  const deleteProjectMutation = useMutation({
+    mutationFn: (projectId: number) => deleteProject(projectId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["projects"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard-summary"] });
+      toast("Repository disconnected.");
+    },
+    onError: () => toast("Failed to disconnect repository. Please try again.", "error"),
+  });
 
   const { data: githubRepos, isLoading: reposLoading } = useQuery({
     queryKey: ["github-repos"],
@@ -260,15 +284,29 @@ export function ProjectList() {
         <aside className="dashboard-side" id="section-repos">
           <div className="dash-section-header">
             <h2>Repositories</h2>
-            {!hasNoProjects && (
-              <button
-                type="button"
-                className="secondary small"
-                onClick={() => setShowConnectForm((v) => !v)}
-              >
-                {showConnectForm ? "Cancel" : "+ Add"}
-              </button>
-            )}
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              {!hasNoProjects && projects && projects.length > 1 && (
+                <label className="sort-control">
+                  Sort
+                  <select
+                    value={projectSortKey}
+                    onChange={(e) => setProjectSortKey(e.target.value as ProjectSortKey)}
+                  >
+                    <option value="recent">Recently connected</option>
+                    <option value="name">Name (A–Z)</option>
+                  </select>
+                </label>
+              )}
+              {!hasNoProjects && (
+                <button
+                  type="button"
+                  className="secondary small"
+                  onClick={() => setShowConnectForm((v) => !v)}
+                >
+                  {showConnectForm ? "Cancel" : "+ Add"}
+                </button>
+              )}
+            </div>
           </div>
 
           <AnimatePresence initial={false}>
@@ -377,7 +415,7 @@ export function ProjectList() {
 
           {!hasNoProjects && (
             <ul className="project-list">
-              {projects?.map((project, index) => (
+              {sortedProjects?.map((project, index) => (
                 <motion.li
                   key={project.id}
                   initial={{ opacity: 0, y: 6 }}
@@ -398,6 +436,12 @@ export function ProjectList() {
                       <ChevronRightIcon />
                     </span>
                   </Link>
+                  <ConfirmDeleteButton
+                    label="Disconnect"
+                    confirmLabel="Disconnect"
+                    onConfirm={() => deleteProjectMutation.mutate(project.id)}
+                    disabled={deleteProjectMutation.isPending}
+                  />
                 </motion.li>
               ))}
             </ul>
