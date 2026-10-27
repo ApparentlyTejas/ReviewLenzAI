@@ -372,39 +372,6 @@ h2 {
 }
 .github-btn-dark:disabled { opacity: 0.45; cursor: default; transform: none; }
 
-/* VerifyEmail uses this simple centered layout */
-.auth-page {
-  max-width: 400px;
-  margin: 0 auto;
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  padding: 40px 24px;
-}
-
-.auth-page h1 {
-  font-size: 28px;
-  text-align: center;
-  margin-bottom: 6px;
-}
-
-.auth-page-subtitle {
-  text-align: center;
-  font-size: 15px;
-  color: var(--text-secondary);
-  margin: 0 0 20px;
-}
-
-.auth-card {
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 18px;
-  padding: 36px 32px;
-  box-shadow: 0 2px 20px rgba(0, 0, 0, 0.06);
-}
-
-.auth-page form,
 .connect-repo-form {
   display: flex;
   flex-direction: column;
