@@ -10,7 +10,7 @@ const STACK = [
   { key: "backend", val: "Python 3.12 · FastAPI · SQLAlchemy · Pydantic v2" },
   { key: "auth", val: "GitHub OAuth · Google OAuth · JWT · bcrypt · Fernet encryption" },
   { key: "database", val: "PostgreSQL (Neon on prod)" },
-  { key: "llm", val: "Groq API · Llama 3.3 70B · enforced output format" },
+  { key: "llm", val: "Groq API · enforced structured output" },
   { key: "frontend", val: "React 19 · TypeScript · Vite · TanStack Query · Framer Motion" },
   { key: "email", val: "Brevo transactional email" },
   { key: "deploy", val: "Render · Neon · Vercel · GitHub Actions CI" },
@@ -159,7 +159,7 @@ export function Landing() {
             Exactly what. Exactly where.
           </h2>
           <p className="lead">
-            The diff goes to Llama 3.3 70B with a strict output format. No free-form guessing.
+            The diff goes to the LLM with a strict output format. No free-form guessing.
             Just category, severity, file path, line number, and a concrete fix.
           </p>
         </ScrollReveal>

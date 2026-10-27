@@ -18,7 +18,7 @@
 
 ReviewLenzAI connects to your GitHub account via OAuth and runs LLM-powered code reviews on open pull requests. Sign in with GitHub or Google, browse all your repos directly in the dashboard, select an open PR and in about 20 seconds you get a full breakdown of every issue: what's broken, what's a security hole, and what's just sloppy. Ranked by severity. No token pasting. No manual setup.
 
-It fetches the raw diff, sends it through Groq's Llama 3.3 70B with a structured tool-call schema, and stores every finding categorised, ranked, and persisted so you can track review history across all your projects.
+It fetches the raw diff, sends it through an LLM on Groq with a structured tool-call schema, and stores every finding categorised, ranked, and persisted so you can track review history across all your projects.
 
 No free-form text. No hallucinated line numbers. Structured JSON output enforced by Pydantic at the boundary.
 
@@ -44,7 +44,7 @@ sequenceDiagram
     GitHub-->>Backend: PR metadata + diff URL
     Backend->>GitHub: GET diff
     GitHub-->>Backend: Unified diff
-    Backend->>Groq: diff + tool-call schema (Llama 3.3 70B)
+    Backend->>Groq: diff + tool-call schema
     Groq-->>Backend: Structured findings JSON
     Backend->>Backend: Validate with Pydantic, persist to Postgres
     Backend-->>Frontend: Review object with findings[]
@@ -65,7 +65,7 @@ ai-code-review-api.onrender.com  (FastAPI)
     ┌────┼──────────┐
     ▼    ▼          ▼
  Neon  GitHub    Groq API
-  DB    API    Llama 3.3 70B
+  DB    API      (LLM)
 ```
 
 The Vercel → Render proxy keeps auth cookies first-party and eliminates CORS entirely.
@@ -80,7 +80,7 @@ The Vercel → Render proxy keeps auth cookies first-party and eliminates CORS e
 | **Backend** | FastAPI · SQLAlchemy 2 · Pydantic v2 · python-jose · passlib |
 | **Auth** | GitHub OAuth · Google OAuth · JWT · bcrypt · Fernet symmetric encryption |
 | **Database** | PostgreSQL via Neon (serverless, free tier) |
-| **LLM** | Groq API `llama-3.3-70b-versatile` · `temperature=0.1` · structured tool-calling |
+| **LLM** | Groq API `qwen/qwen3.8-27b` · `temperature=0.1` · structured tool-calling |
 | **Email** | Brevo transactional email |
 | **Security** | HttpOnly cookies · Fernet-encrypted OAuth tokens · bcrypt · JWT · SlowAPI rate limiting · security headers |
 | **CI/CD** | GitHub Actions: ruff + mypy + pytest-cov (backend), oxlint + tsc + vitest-cov (frontend) on every push |
