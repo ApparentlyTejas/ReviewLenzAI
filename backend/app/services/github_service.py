@@ -102,3 +102,16 @@ def get_pull_request_diff(pat: str, repo_owner: str, repo_name: str, pr_number: 
         raise GitHubNotFoundError(f"PR #{pr_number} not found")
     response.raise_for_status()
     return response.text
+
+
+def post_issue_comment(pat: str, repo_owner: str, repo_name: str, issue_number: int, body: str) -> str:
+    """Posts a comment on a PR (GitHub treats a PR's conversation as the issue
+    with the same number) and returns the comment's URL on GitHub."""
+    url = f"{GITHUB_API_BASE}/repos/{repo_owner}/{repo_name}/issues/{issue_number}/comments"
+    response = httpx.post(url, headers=_headers(pat), json={"body": body}, timeout=15)
+    if response.status_code == 401:
+        raise GitHubAuthError("GitHub token is invalid or expired")
+    if response.status_code == 404:
+        raise GitHubNotFoundError(f"PR #{issue_number} not found")
+    response.raise_for_status()
+    return response.json()["html_url"]
