@@ -25,6 +25,14 @@ class FindingSeverity(str, Enum):
     critical = "critical"
 
 
+SEVERITY_RANK = {
+    FindingSeverity.low: 0,
+    FindingSeverity.medium: 1,
+    FindingSeverity.high: 2,
+    FindingSeverity.critical: 3,
+}
+
+
 class Finding(Base):
     __tablename__ = "findings"
 
