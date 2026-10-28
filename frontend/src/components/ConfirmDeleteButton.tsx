@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { TrashIcon } from "./Icons";
 
 interface ConfirmDeleteButtonProps {
   onConfirm: () => void;
@@ -52,7 +53,7 @@ export function ConfirmDeleteButton({
   return (
     <button
       type="button"
-      className="secondary small"
+      className="secondary small delete-trigger"
       disabled={disabled}
       onClick={(e) => {
         e.stopPropagation();
@@ -60,6 +61,7 @@ export function ConfirmDeleteButton({
         setConfirming(true);
       }}
     >
+      <TrashIcon size={13} />
       {label}
     </button>
   );
