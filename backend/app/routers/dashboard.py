@@ -167,18 +167,21 @@ def list_deleted_reviews(
         .order_by(Review.deleted_at.desc())
         .all()
     )
-    return [
-        DeletedReviewOut(
-            id=review.id,
-            project_id=project.id,
-            repo_owner=project.repo_owner,
-            repo_name=project.repo_name,
-            pr_number=review.pr_number,
-            pr_title=review.pr_title,
-            deleted_at=review.deleted_at,
+    out = []
+    for review, project in rows:
+        assert review.deleted_at is not None
+        out.append(
+            DeletedReviewOut(
+                id=review.id,
+                project_id=project.id,
+                repo_owner=project.repo_owner,
+                repo_name=project.repo_name,
+                pr_number=review.pr_number,
+                pr_title=review.pr_title,
+                deleted_at=review.deleted_at,
+            )
         )
-        for review, project in rows
-    ]
+    return out
 
 
 @router.post("/deleted-reviews/{review_id}/restore", response_model=RecentReviewOut)
