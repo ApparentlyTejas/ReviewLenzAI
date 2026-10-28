@@ -755,10 +755,17 @@ button.danger:hover:not(:disabled) {
   gap: 6px;
 }
 
+.dash-section-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
 .sort-control {
   display: flex;
   align-items: center;
   gap: 6px;
+  height: 32px;
   font-size: 13px;
   color: var(--text-secondary);
 }
@@ -766,11 +773,22 @@ button.danger:hover:not(:disabled) {
 .sort-control select {
   font: inherit;
   font-size: 16px; /* iOS zooms the page in on focus below 16px */
-  padding: 5px 8px;
+  height: 32px;
+  box-sizing: border-box;
+  padding: 0 8px;
   border-radius: 6px;
   border: 1px solid var(--border);
   background: var(--bg);
   color: var(--text);
+}
+
+.add-repo-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  box-sizing: border-box;
+  border: 1px solid var(--border);
 }
 
 .error {

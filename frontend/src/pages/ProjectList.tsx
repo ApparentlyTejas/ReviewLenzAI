@@ -10,7 +10,7 @@ import { listGitHubRepos, createProjectFromGitHub } from "../api/github";
 import { ConfirmDeleteButton } from "../components/ConfirmDeleteButton";
 import { GitHubLoginButton } from "../components/GitHubLoginButton";
 import { RepoPicker } from "../components/RepoPicker";
-import { ChevronRightIcon } from "../components/Icons";
+import { ChevronRightIcon, PlusIcon } from "../components/Icons";
 import { CountUp } from "../components/CountUp";
 import { DashboardChatPanel } from "../components/DashboardChatPanel";
 import { FindingsTrendChart } from "../components/FindingsTrendChart";
@@ -295,7 +295,7 @@ export function ProjectList() {
         <aside className="dashboard-side" id="section-repos">
           <div className="dash-section-header">
             <h2>Repositories</h2>
-            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <div className="dash-section-actions">
               {!hasNoProjects && projects && projects.length > 1 && (
                 <label className="sort-control">
                   Sort
@@ -311,10 +311,17 @@ export function ProjectList() {
               {!hasNoProjects && (
                 <button
                   type="button"
-                  className="secondary small"
+                  className="secondary small add-repo-button"
                   onClick={() => setShowConnectForm((v) => !v)}
                 >
-                  {showConnectForm ? "Cancel" : "+ Add"}
+                  {showConnectForm ? (
+                    "Cancel"
+                  ) : (
+                    <>
+                      <PlusIcon size={14} />
+                      Add
+                    </>
+                  )}
                 </button>
               )}
             </div>
