@@ -21,6 +21,7 @@ class Settings(BaseSettings):
     brevo_api_key: str = ""
     brevo_from_email: str = "reviewlenzai@gmail.com"
     app_url: str = "http://localhost:5173"
+    api_url: str = "http://localhost:8000"
 
     @property
     def cors_origins_list(self) -> list[str]:
