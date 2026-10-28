@@ -9,7 +9,7 @@ export function DashboardChatPanel() {
       placeholder="Ask about your projects, reviews, or findings..."
       emptyHint={
         <>
-          Ask anything across all your connected repos — e.g. "what critical issues do I have?" or
+          Ask anything across all your connected repos, e.g. "what critical issues do I have?" or
           "summarize my last review".
         </>
       }

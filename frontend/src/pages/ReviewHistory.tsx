@@ -6,7 +6,7 @@ import { deleteReview, listReviews } from "../api/projects";
 import { BackButton } from "../components/BackButton";
 import { ConfirmDeleteButton } from "../components/ConfirmDeleteButton";
 import { pageTransition } from "../components/pageTransition";
-import { Spinner } from "../components/Spinner";
+import { SkeletonRows } from "../components/Skeleton";
 import { TiltCard } from "../components/TiltCard";
 import { useToast } from "../components/Toast";
 import type { ReviewSummary } from "../types";
@@ -37,7 +37,7 @@ export function ReviewHistory() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["reviews", id] });
       queryClient.invalidateQueries({ queryKey: ["dashboard-summary"] });
-      toast("Review deleted.");
+      toast("Review deleted. Restorable from Settings for 30 days.");
     },
     onError: () => toast("Failed to delete review. Please try again.", "error"),
   });
@@ -65,7 +65,7 @@ export function ReviewHistory() {
         )}
       </header>
 
-      {isLoading && <Spinner label="Loading review history..." />}
+      {isLoading && <SkeletonRows variant="row" />}
 
       <ul className="review-history-list">
         {sortedReviews?.map((review, index) => (

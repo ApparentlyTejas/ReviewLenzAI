@@ -26,6 +26,11 @@
      for cards/panels so elevated surfaces share one consistent material. */
   --glass-bg: rgba(255, 255, 255, 0.72);
   --glass-border: rgba(255, 255, 255, 0.5);
+  /* A 1px inner highlight along a surface's top edge, as if it were catching
+     light — the detail that reads as "physical glass" rather than "a box with
+     blur applied". Same idea .auth-glass and .mock-finding-card already use
+     literally; this is that recipe generalized and themed. */
+  --glass-top-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.8);
 
   /* The one easing curve every hover/press/reveal transition in the app should
      use — a gentle ease-out-expo. Mixing easings is what makes an interface feel
@@ -41,6 +46,55 @@
   color: var(--text);
   background: var(--bg);
 }
+
+/* Dark theme — same roles, same --bg-dark/--text-on-dark/--border-on-dark constants that
+   the hero/section-dark/auth blocks already used (those stay literally black in both themes
+   for rhythm against this lighter charcoal --bg), applied via [data-theme] which ThemeContext
+   always sets explicitly (resolved from localStorage or matchMedia on load) so there's no
+   flash-of-wrong-theme to also cover with a prefers-color-scheme fallback here. */
+:root[data-theme="dark"] {
+  --text: #f5f5f7;
+  --text-secondary: #98989d;
+  --bg: #121214;
+  --bg-subtle: #1c1c1f;
+  --border: #2e2e32;
+  --code-bg: #1c1c1f;
+  --accent: #2997ff;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4), 0 2px 6px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 2px 6px rgba(0, 0, 0, 0.35), 0 10px 24px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 4px 12px rgba(0, 0, 0, 0.4), 0 20px 48px rgba(0, 0, 0, 0.5);
+  --shadow-accent-glow: 0 8px 28px rgba(41, 151, 255, 0.28);
+  --glass-bg: rgba(18, 18, 20, 0.72);
+  --glass-border: rgba(255, 255, 255, 0.08);
+  --glass-top-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.07);
+  color-scheme: dark;
+}
+
+/* Dark theme — the handful of spots that don't flow from a variable: either a literal
+   color baked in for a specific light surface, or (chat-stop-button) a variable reused for
+   its *current* light-mode value rather than its role, which breaks once that variable
+   itself goes dark. Everything else in the file already repaints correctly from the
+   variable overrides above. */
+:root[data-theme="dark"] .navbar,
+:root[data-theme="dark"] .landing-nav {
+  background: rgba(18, 18, 20, 0.82);
+}
+:root[data-theme="dark"] button.secondary:hover:not(:disabled) {
+  background: #303034;
+}
+:root[data-theme="dark"] .chat-stop-button {
+  background: var(--bg-dark);
+}
+:root[data-theme="dark"] .toast-success {
+  background: #2c2c2e;
+}
+:root[data-theme="dark"] .badge.severity-critical { color: #ff6b6b; }
+:root[data-theme="dark"] .badge.severity-high { color: #ffa94d; }
+:root[data-theme="dark"] .badge.severity-medium,
+:root[data-theme="dark"] .badge.status-pending { color: #ffd43b; }
+:root[data-theme="dark"] .badge.severity-low { color: #a1a1a6; }
+:root[data-theme="dark"] .badge.status-completed,
+:root[data-theme="dark"] .already-reviewed-badge { color: #34d058; }
 
 * {
   box-sizing: border-box;
@@ -58,6 +112,20 @@ body {
 a {
   color: var(--accent);
   text-decoration: none;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 /* ---------- App shell (authenticated pages) ---------- */
@@ -105,12 +173,6 @@ a {
   font-size: 13px;
 }
 
-.navbar-user {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-}
-
 .navbar-avatar {
   display: inline-flex;
   align-items: center;
@@ -123,6 +185,129 @@ a {
   color: #fff;
   letter-spacing: 0.02em;
   flex-shrink: 0;
+}
+
+.account-menu {
+  position: relative;
+}
+
+.account-menu-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 10px 5px 6px;
+  min-height: 38px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  color: var(--text-secondary);
+  font-size: 13px;
+  box-shadow: none;
+  transition: background 0.2s var(--ease-smooth), border-color 0.2s var(--ease-smooth);
+}
+
+.account-menu-trigger:hover {
+  background: var(--bg-subtle);
+  border-color: var(--border);
+  transform: none;
+  box-shadow: none;
+}
+
+.account-menu-trigger svg {
+  color: var(--text-secondary);
+  transition: transform 0.2s var(--ease-smooth);
+}
+
+.account-menu-trigger[aria-expanded="true"] svg:last-child {
+  transform: rotate(180deg);
+}
+
+.account-menu-panel {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  min-width: 240px;
+  background: var(--glass-bg);
+  backdrop-filter: saturate(180%) blur(20px);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 8px;
+  box-shadow: var(--shadow-lg), var(--glass-top-highlight);
+  z-index: 30;
+  animation: account-menu-pop 0.16s var(--ease-smooth);
+}
+
+@keyframes account-menu-pop {
+  from { opacity: 0; transform: translateY(-4px) scale(0.98); }
+  to { opacity: 1; transform: none; }
+}
+
+.account-menu-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 8px 12px;
+}
+
+.account-menu-header .navbar-avatar {
+  width: 32px;
+  height: 32px;
+  font-size: 12px;
+}
+
+.account-menu-identity {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.account-menu-username {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.account-menu-email {
+  font-size: 11px;
+  color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.account-menu-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 0 2px 6px;
+}
+
+.account-menu-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 10px;
+  min-height: 40px;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 500;
+  text-align: left;
+  box-shadow: none;
+  transition: background 0.15s var(--ease-smooth), color 0.15s var(--ease-smooth);
+}
+
+.account-menu-item:hover {
+  background: var(--bg-subtle);
+  color: var(--text);
+  transform: none;
+  box-shadow: none;
 }
 
 @media (max-width: 480px) {
@@ -191,6 +376,13 @@ h2 {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 28px;
+}
+
+.page-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
 }
 
 .review-status-row {
@@ -428,16 +620,30 @@ label {
   text-align: left;
 }
 
-input {
+input,
+select,
+textarea {
   padding: 11px 14px;
   border: 1px solid var(--border);
   border-radius: 7px;
   font: inherit;
-  font-size: 15px;
+  /* iOS Safari zooms the whole page in on focus for any input under 16px —
+     16px here is the fix, not a design choice. */
+  font-size: 16px;
+  color: var(--text);
+  background: var(--bg);
   transition: border-color 0.2s var(--ease-smooth), box-shadow 0.2s var(--ease-smooth);
 }
 
-input:focus {
+textarea {
+  resize: vertical;
+  font-family: var(--mono);
+  font-size: 13px;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
   outline: none;
   border-color: var(--accent);
   box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.15);
@@ -454,7 +660,7 @@ input:focus {
 }
 
 .tilt-card:hover {
-  box-shadow: var(--shadow-lg);
+  box-shadow: var(--shadow-lg), var(--glass-top-highlight);
 }
 
 button {
@@ -467,12 +673,15 @@ button {
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
-  transition: transform 0.2s var(--ease-smooth), opacity 0.2s var(--ease-smooth), background 0.2s var(--ease-smooth);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+  transition: transform 0.2s var(--ease-smooth), opacity 0.2s var(--ease-smooth),
+    background 0.2s var(--ease-smooth), box-shadow 0.25s var(--ease-smooth);
 }
 
 button:hover:not(:disabled) {
   background: #0077ed;
   transform: translateY(-1px);
+  box-shadow: var(--shadow-accent-glow);
 }
 
 button:active:not(:disabled) {
@@ -492,11 +701,43 @@ button.secondary {
 
 button.secondary:hover:not(:disabled) {
   background: #e8e8ed;
+  box-shadow: var(--shadow-sm);
 }
 
 button.small {
   padding: 7px 14px;
   font-size: 13px;
+}
+
+.delete-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-secondary);
+}
+
+.delete-trigger:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--danger) 12%, var(--bg-subtle));
+  color: var(--danger);
+}
+
+.theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border-radius: 50%;
+  background: var(--bg-subtle);
+  color: var(--text-secondary);
+  transition: color 0.2s var(--ease-smooth), background 0.2s var(--ease-smooth), transform 0.2s var(--ease-smooth);
+}
+
+.theme-toggle:hover:not(:disabled) {
+  background: var(--border);
+  color: var(--text);
+  transform: none;
 }
 
 button.danger {
@@ -506,6 +747,7 @@ button.danger {
 
 button.danger:hover:not(:disabled) {
   background: #e0352b;
+  box-shadow: 0 8px 28px rgba(255, 59, 48, 0.25);
 }
 
 .confirm-delete-group {
@@ -523,7 +765,7 @@ button.danger:hover:not(:disabled) {
 
 .sort-control select {
   font: inherit;
-  font-size: 13px;
+  font-size: 16px; /* iOS zooms the page in on focus below 16px */
   padding: 5px 8px;
   border-radius: 6px;
   border: 1px solid var(--border);
@@ -559,6 +801,22 @@ button.danger:hover:not(:disabled) {
   border-radius: 8px;
   padding: 14px 18px;
   gap: 12px;
+}
+
+.pull-request-list li > div:first-child {
+  flex: 1;
+  min-width: 0;
+}
+
+@media (max-width: 640px) {
+  .pull-request-list li,
+  .review-history-list li {
+    flex-wrap: wrap;
+  }
+
+  .review-history-list li a {
+    flex: 1 1 100%;
+  }
 }
 
 .project-list li {
@@ -657,6 +915,252 @@ button.danger:hover:not(:disabled) {
   .review-detail-grid {
     grid-template-columns: 1fr;
   }
+
+  /* Sticky only makes sense next to a taller column — stacked under the
+     findings list on mobile/tablet, it has nothing useful to stick against. */
+  .review-detail-grid .chat-panel {
+    position: static;
+    max-height: none;
+  }
+}
+
+.diff-empty {
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+
+.diff-viewer {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.diff-file {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--bg);
+}
+
+.diff-file-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 10px 14px;
+  background: var(--bg-subtle);
+  border: none;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.diff-file-header svg {
+  flex-shrink: 0;
+  transition: transform 0.2s var(--ease-smooth);
+}
+
+.diff-file-header[aria-expanded="false"] svg {
+  transform: rotate(-90deg);
+}
+
+.diff-file-path {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--mono);
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.diff-file-tag {
+  flex-shrink: 0;
+  font-family: var(--sans);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  background: var(--border);
+  border-radius: 4px;
+  padding: 1px 6px;
+}
+
+.diff-file-stats {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--mono);
+  font-size: 12px;
+}
+
+.diff-stat-add {
+  color: #2e9e44;
+}
+
+.diff-stat-del {
+  color: #c0392b;
+}
+
+.diff-stat-findings {
+  font-family: var(--sans);
+  color: var(--text-secondary);
+}
+
+.diff-lines {
+  overflow-x: auto;
+}
+
+.diff-hunk-header {
+  padding: 4px 14px;
+  background: var(--bg-subtle);
+  color: var(--text-secondary);
+  font-family: var(--mono);
+  font-size: 12px;
+}
+
+.diff-line {
+  display: flex;
+  align-items: flex-start;
+  font-family: var(--mono);
+  font-size: 12.5px;
+  line-height: 1.6;
+}
+
+.diff-line-num {
+  flex-shrink: 0;
+  width: 36px;
+  padding: 0 6px;
+  text-align: right;
+  color: var(--text-secondary);
+  opacity: 0.6;
+  user-select: none;
+}
+
+.diff-line-marker {
+  flex-shrink: 0;
+  width: 16px;
+  text-align: center;
+  user-select: none;
+}
+
+.diff-line-content {
+  flex: 1;
+  min-width: 0;
+  padding-right: 14px;
+  white-space: pre;
+}
+
+.diff-line-add {
+  background: rgba(46, 158, 68, 0.1);
+}
+
+.diff-line-add .diff-line-marker {
+  color: #2e9e44;
+}
+
+.diff-line-del {
+  background: rgba(192, 57, 41, 0.1);
+}
+
+.diff-line-del .diff-line-marker {
+  color: #c0392b;
+}
+
+.diff-finding {
+  margin: 0 14px 10px 58px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-left-width: 3px;
+  border-radius: 8px;
+  background: var(--bg-subtle);
+  font-size: 13px;
+}
+
+.diff-finding-critical {
+  border-left-color: #c0392b;
+}
+.diff-finding-high {
+  border-left-color: #e67e22;
+}
+.diff-finding-medium {
+  border-left-color: #d4a017;
+}
+.diff-finding-low {
+  border-left-color: #98989d;
+}
+
+.diff-finding-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.diff-finding-category {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.diff-finding pre {
+  font-family: var(--mono);
+  font-size: 12px;
+  white-space: pre-wrap;
+}
+
+:root[data-theme="dark"] .diff-stat-add {
+  color: #4cc26a;
+}
+:root[data-theme="dark"] .diff-stat-del {
+  color: #ff6b6b;
+}
+:root[data-theme="dark"] .diff-line-add .diff-line-marker {
+  color: #4cc26a;
+}
+:root[data-theme="dark"] .diff-line-del .diff-line-marker {
+  color: #ff6b6b;
+}
+:root[data-theme="dark"] .diff-finding-critical {
+  border-left-color: #ff6b6b;
+}
+:root[data-theme="dark"] .diff-finding-high {
+  border-left-color: #ffa94d;
+}
+
+@media (max-width: 640px) {
+  .diff-line-num:first-of-type {
+    display: none;
+  }
+
+  .diff-finding {
+    margin-left: 14px;
+  }
+}
+
+@keyframes skeleton-shimmer {
+  0% { background-position: -200px 0; }
+  100% { background-position: 200px 0; }
+}
+
+.skeleton {
+  background: linear-gradient(90deg, var(--bg-subtle) 25%, var(--border) 37%, var(--bg-subtle) 63%);
+  background-size: 400px 100%;
+  animation: skeleton-shimmer 1.4s ease-in-out infinite;
+  border-radius: 4px;
+}
+
+.skeleton-bar {
+  display: inline-block;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton {
+    animation: none;
+  }
 }
 
 .finding-ask-button {
@@ -671,7 +1175,7 @@ button.danger:hover:not(:disabled) {
   padding: 18px;
   background: var(--glass-bg);
   backdrop-filter: saturate(180%) blur(20px);
-  box-shadow: var(--shadow-md);
+  box-shadow: var(--shadow-md), var(--glass-top-highlight);
   display: flex;
   flex-direction: column;
   max-height: calc(100vh - 40px);
@@ -795,6 +1299,40 @@ button.danger:hover:not(:disabled) {
   align-items: center;
 }
 
+/* A live "it's writing" ring on the assistant's avatar while streaming — the
+   typing dots already say this once up front, but once text starts arriving
+   they're gone, and nothing else on the bubble kept signaling "still live". */
+.chat-message-pending .chat-avatar {
+  animation: chat-avatar-pulse 1.6s ease-out infinite;
+}
+
+@keyframes chat-avatar-pulse {
+  0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 55%, transparent); }
+  70% { box-shadow: 0 0 0 7px color-mix(in srgb, var(--accent) 0%, transparent); }
+  100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 0%, transparent); }
+}
+
+.chat-streaming-text {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.chat-cursor {
+  display: inline-block;
+  width: 2px;
+  height: 1em;
+  margin-left: 1px;
+  vertical-align: text-bottom;
+  background: var(--accent);
+  animation: chat-cursor-blink 0.9s steps(1) infinite;
+}
+
+@keyframes chat-cursor-blink {
+  0%, 50% { opacity: 1; }
+  50.01%, 100% { opacity: 0; }
+}
+
 .chat-typing-dots {
   display: inline-flex;
   gap: 4px;
@@ -892,7 +1430,7 @@ button.danger:hover:not(:disabled) {
   border: none;
   padding: 9px 0;
   font: inherit;
-  font-size: 14px;
+  font-size: 16px; /* iOS zooms the page in on focus below 16px */
   line-height: 1.4;
   background: none;
   max-height: 140px;
@@ -949,6 +1487,27 @@ button.danger:hover:not(:disabled) {
 .badge.status-failed {
   background: rgba(192, 57, 41, 0.15);
   color: var(--danger);
+}
+
+.badge.badge-new {
+  background: rgba(0, 113, 227, 0.15);
+  color: var(--accent);
+}
+
+.review-delta-banner {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin: -8px 0 20px;
+}
+
+.review-delta-resolved {
+  color: #1b7e36;
+  font-weight: 600;
+}
+
+.review-delta-new {
+  color: var(--accent);
+  font-weight: 600;
 }
 
 .stat-cards {
@@ -1024,6 +1583,28 @@ button.danger:hover:not(:disabled) {
   min-width: 4px;
 }
 
+.severity-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.severity-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.severity-legend-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
 @keyframes status-pulse {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.35; }
@@ -1051,6 +1632,48 @@ button.danger:hover:not(:disabled) {
 .badge.severity-low {
   background: rgba(152, 152, 157, 0.15);
   color: #6e6e73;
+}
+
+.trend-chart {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 18px 20px 14px;
+  margin-bottom: 20px;
+  background: var(--bg);
+}
+
+.trend-chart-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 8px;
+}
+
+.trend-chart-header h3 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.trend-chart-total {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.trend-chart-svg {
+  width: 100%;
+  height: 90px;
+  display: block;
+}
+
+.trend-chart-labels {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 2px;
+  font-size: 11px;
+  color: var(--text-secondary);
 }
 
 /* ---------- Dashboard header ---------- */
@@ -1114,8 +1737,16 @@ button.danger:hover:not(:disabled) {
 
 .activity-item {
   position: relative;
+  display: flex;
+  align-items: center;
   border-bottom: 1px solid var(--border);
   transition: background 0.2s var(--ease-smooth);
+}
+
+.activity-item .confirm-delete-group,
+.activity-item > button {
+  margin-right: 14px;
+  flex-shrink: 0;
 }
 
 .activity-item:last-child {
@@ -1135,6 +1766,8 @@ button.danger:hover:not(:disabled) {
 }
 
 .activity-link {
+  flex: 1;
+  min-width: 0;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -1224,6 +1857,14 @@ button.danger:hover:not(:disabled) {
 @media (max-width: 860px) {
   .dashboard-grid {
     grid-template-columns: 1fr;
+  }
+}
+
+/* iPad portrait (~768-834px) is wide enough for 2 stat cards but not 3 without
+   them getting cramped. */
+@media (max-width: 860px) and (min-width: 641px) {
+  .stat-cards {
+    grid-template-columns: repeat(2, 1fr);
   }
 }
 
@@ -1327,6 +1968,24 @@ pre {
   }
 }
 
+@media (max-width: 480px) {
+  .landing-nav {
+    padding: 0 16px;
+  }
+
+  .landing-nav-brand span {
+    display: none;
+  }
+
+  .landing-nav-github {
+    display: none;
+  }
+
+  .landing-nav-links {
+    gap: 10px;
+  }
+}
+
 .landing-nav-links {
   display: flex;
   gap: 16px;
@@ -1355,8 +2014,23 @@ pre {
 .hero-glow {
   position: absolute;
   inset: -20%;
-  background: radial-gradient(ellipse at 40% 50%, rgba(0, 113, 227, 0.18), transparent 55%);
+  background:
+    radial-gradient(ellipse at 32% 38%, rgba(0, 113, 227, 0.22), transparent 55%),
+    radial-gradient(ellipse at 68% 62%, rgba(120, 40, 220, 0.14), transparent 55%);
   pointer-events: none;
+}
+
+/* A faint grain over the hero's gradient mesh — without it a smooth radial
+   gradient on a near-black background bands visibly on most displays; grain is
+   the standard fix (it's why Stripe's own marketing gradients have it too). */
+.hero::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.4;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
 .hero-content {
@@ -1396,6 +2070,7 @@ pre {
 
 .hero-actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 16px;
   justify-content: center;
   z-index: 1;
@@ -1414,12 +2089,13 @@ pre {
   color: #0f0f0d;
   font-size: 15px;
   font-weight: 600;
-  transition: transform 0.2s var(--ease-smooth), opacity 0.2s var(--ease-smooth);
+  transition: transform 0.2s var(--ease-smooth), opacity 0.2s var(--ease-smooth), box-shadow 0.25s var(--ease-smooth);
 }
 
 .btn-pill:hover {
   transform: translateY(-2px);
   opacity: 0.9;
+  box-shadow: 0 10px 32px rgba(41, 151, 255, 0.35);
 }
 
 .btn-pill:active {
@@ -2089,4 +2765,281 @@ pre {
   background: rgba(52, 199, 89, 0.15);
   color: #1b7e36;
   margin-left: 8px;
+}
+
+/* ---------- Settings page ---------- */
+
+.theme-pref-row {
+  display: inline-flex;
+  gap: 4px;
+  padding: 4px;
+  background: var(--bg-subtle);
+  border-radius: 10px;
+  margin-bottom: 28px;
+}
+
+.theme-pref-option {
+  padding: 7px 16px;
+  background: transparent;
+  color: var(--text-secondary);
+  border-radius: 7px;
+  box-shadow: none;
+  font-size: 13px;
+  font-weight: 500;
+  transition: background 0.2s var(--ease-smooth), color 0.2s var(--ease-smooth);
+}
+
+.theme-pref-option:hover {
+  background: none;
+  transform: none;
+  box-shadow: none;
+  color: var(--text);
+}
+
+.theme-pref-option.active {
+  background: var(--bg);
+  color: var(--text);
+  box-shadow: var(--shadow-sm);
+}
+
+.settings-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 0;
+  margin-bottom: 20px;
+}
+
+.settings-row p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+
+@media (max-width: 520px) {
+  .settings-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .settings-row button {
+    align-self: flex-start;
+  }
+}
+
+.webhook-setup-box {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background: var(--bg-subtle);
+  border-radius: 10px;
+  padding: 20px;
+  margin-bottom: 20px;
+  max-width: 480px;
+}
+
+.webhook-setup-box p {
+  margin: 0;
+  font-size: 14px;
+}
+
+.webhook-setup-box code {
+  background: var(--code-bg);
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-size: 13px;
+}
+
+.webhook-field-row {
+  display: flex;
+  gap: 8px;
+}
+
+.webhook-field-row input {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--mono);
+  font-size: 13px;
+}
+
+.danger-zone {
+  border: 1px solid color-mix(in srgb, var(--danger) 30%, var(--border));
+  border-radius: 12px;
+  padding: 4px 18px;
+  background: color-mix(in srgb, var(--danger) 4%, transparent);
+}
+
+.danger-zone .settings-row {
+  margin-bottom: 0;
+}
+
+/* ---------- Command palette ---------- */
+
+kbd {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text-secondary);
+  background: var(--bg-subtle);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  padding: 2px 6px;
+  line-height: 1.4;
+}
+
+.cmdk-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 10px;
+  min-height: 38px;
+  background: var(--bg-subtle);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  font-size: 13px;
+  box-shadow: none;
+  transition: border-color 0.2s var(--ease-smooth), color 0.2s var(--ease-smooth);
+}
+
+.cmdk-trigger:hover {
+  border-color: color-mix(in srgb, var(--text) 25%, var(--border));
+  color: var(--text);
+  transform: none;
+  box-shadow: none;
+}
+
+@media (max-width: 560px) {
+  .cmdk-trigger-label {
+    display: none;
+  }
+}
+
+/* The ⌘K hint is meaningless without a physical keyboard — hide it whenever
+   there's no fine pointer/hover (touch devices), not just by screen width,
+   since an iPad with a trackpad still has one. */
+@media (hover: none), (pointer: coarse) {
+  .cmdk-trigger kbd,
+  .cmdk-search kbd {
+    display: none;
+  }
+}
+
+.cmdk-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  justify-content: center;
+  padding: 14vh 16px 16px;
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(2px);
+}
+
+.cmdk-panel {
+  width: min(560px, 100%);
+  max-height: 60vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: var(--shadow-lg), var(--glass-top-highlight);
+  overflow: hidden;
+  animation: cmdk-pop 0.15s var(--ease-smooth);
+}
+
+@keyframes cmdk-pop {
+  from { opacity: 0; transform: translateY(-6px) scale(0.98); }
+  to { opacity: 1; transform: none; }
+}
+
+.cmdk-search {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-secondary);
+  flex-shrink: 0;
+}
+
+.cmdk-search input {
+  flex: 1;
+  border: none;
+  background: none;
+  padding: 0;
+  font-size: 16px; /* iOS zooms the page in on focus below 16px */
+  color: var(--text);
+}
+
+.cmdk-search input:focus {
+  outline: none;
+  box-shadow: none;
+}
+
+.cmdk-list {
+  overflow-y: auto;
+  padding: 6px;
+  flex: 1;
+  min-height: 0;
+}
+
+.cmdk-empty {
+  padding: 30px 12px;
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 14px;
+  margin: 0;
+}
+
+.cmdk-group-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-secondary);
+  padding: 10px 10px 4px;
+}
+
+.cmdk-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 10px;
+  min-height: 40px;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  color: var(--text);
+  font-size: 14px;
+  text-align: left;
+  box-shadow: none;
+  transition: background 0.1s var(--ease-smooth);
+}
+
+.cmdk-item:hover,
+.cmdk-item.active {
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  transform: none;
+  box-shadow: none;
+}
+
+.cmdk-item-label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cmdk-item-sub {
+  flex-shrink: 0;
+  font-size: 12px;
+  color: var(--text-secondary);
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }

@@ -176,7 +176,18 @@ export function ChatThread({
             )}
             {isStreaming && (
               <ChatBubble role="assistant" pending>
-                {streamingReply ? <ChatMarkdown content={streamingReply} /> : <TypingDots />}
+                {streamingReply ? (
+                  // Plain text + a real trailing cursor while tokens are still arriving —
+                  // re-parsing as markdown every delta doesn't let a cursor sit at the true
+                  // end of the text. Swaps to the fully-rendered ChatMarkdown once the
+                  // message lands in `messages` (see the map above) and this bubble unmounts.
+                  <p className="chat-streaming-text">
+                    {streamingReply}
+                    <span className="chat-cursor" aria-hidden="true" />
+                  </p>
+                ) : (
+                  <TypingDots />
+                )}
               </ChatBubble>
             )}
           </AnimatePresence>

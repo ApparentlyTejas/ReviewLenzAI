@@ -1,11 +1,9 @@
 import { Link } from "react-router-dom";
-import { useAuth } from "../auth/AuthContext";
-import { avatarColor, avatarInitials } from "../lib/avatar";
 import { Logo } from "./Logo";
+import { SearchIcon } from "./Icons";
+import { AccountMenu } from "./AccountMenu";
 
 export function Navbar() {
-  const { user, logout } = useAuth();
-
   return (
     <nav className="navbar">
       <Link to="/" className="navbar-brand">
@@ -13,17 +11,16 @@ export function Navbar() {
         <span>ReviewLenzAI</span>
       </Link>
       <div className="navbar-links">
-        {user && (
-          <span className="navbar-user">
-            <span className="navbar-avatar" style={{ background: avatarColor(user.email) }}>
-              {avatarInitials(user.email)}
-            </span>
-            <span className="navbar-user-email">{user.email}</span>
-          </span>
-        )}
-        <button className="secondary" onClick={logout}>
-          Log out
+        <button
+          type="button"
+          className="cmdk-trigger"
+          onClick={() => window.dispatchEvent(new Event("open-command-palette"))}
+        >
+          <SearchIcon size={14} />
+          <span className="cmdk-trigger-label">Search</span>
+          <kbd>⌘K</kbd>
         </button>
+        <AccountMenu />
       </div>
     </nav>
   );

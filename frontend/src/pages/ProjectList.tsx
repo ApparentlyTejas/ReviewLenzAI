@@ -4,20 +4,23 @@ import type { AxiosError } from "axios";
 import { AnimatePresence, motion } from "framer-motion";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
-import { getDashboardSummary } from "../api/dashboard";
-import { createProject, deleteProject, listProjects } from "../api/projects";
+import { getDashboardSummary, getFindingsTrend } from "../api/dashboard";
+import { createProject, deleteProject, deleteReview, listProjects } from "../api/projects";
 import { listGitHubRepos, createProjectFromGitHub } from "../api/github";
 import { ConfirmDeleteButton } from "../components/ConfirmDeleteButton";
 import { GitHubLoginButton } from "../components/GitHubLoginButton";
 import { RepoPicker } from "../components/RepoPicker";
 import { ChevronRightIcon } from "../components/Icons";
+import { CountUp } from "../components/CountUp";
 import { DashboardChatPanel } from "../components/DashboardChatPanel";
+import { FindingsTrendChart } from "../components/FindingsTrendChart";
 import { TiltCard } from "../components/TiltCard";
 import { pageTransition } from "../components/pageTransition";
-import { Spinner } from "../components/Spinner";
+import { SkeletonRows } from "../components/Skeleton";
 import { useToast } from "../components/Toast";
 import { usePageTitle } from "../hooks/usePageTitle";
 import { avatarColor, avatarInitials } from "../lib/avatar";
+import { timeAgo } from "../lib/timeAgo";
 import type { FindingSeverity, Project, ReviewStatus } from "../types";
 
 type ProjectSortKey = "recent" | "name";
@@ -49,23 +52,7 @@ function greeting(): string {
   return "Good evening";
 }
 
-function displayName(email: string): string {
-  const local = email.split("@")[0];
-  const first = local.split(/[._]/)[0];
-  return first.charAt(0).toUpperCase() + first.slice(1);
-}
 
-
-function timeAgo(isoDate: string): string {
-  const seconds = Math.floor((Date.now() - new Date(isoDate).getTime()) / 1000);
-  if (seconds < 60) return "just now";
-  const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `${minutes}m ago`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  return `${days}d ago`;
-}
 
 export function ProjectList() {
   const { user } = useAuth();
@@ -77,6 +64,7 @@ export function ProjectList() {
 
   const { data: projects, isLoading } = useQuery({ queryKey: ["projects"], queryFn: listProjects });
   const { data: summary } = useQuery({ queryKey: ["dashboard-summary"], queryFn: getDashboardSummary });
+  const { data: trend } = useQuery({ queryKey: ["findings-trend"], queryFn: getFindingsTrend });
 
   const [repoOwner, setRepoOwner] = useState("");
   const [repoName, setRepoName] = useState("");
@@ -99,9 +87,18 @@ export function ProjectList() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["projects"] });
       queryClient.invalidateQueries({ queryKey: ["dashboard-summary"] });
-      toast("Repository disconnected.");
+      toast("Repository disconnected. Restorable from Settings for 30 days.");
     },
     onError: () => toast("Failed to disconnect repository. Please try again.", "error"),
+  });
+
+  const deleteReviewMutation = useMutation({
+    mutationFn: ({ projectId, reviewId }: { projectId: number; reviewId: number }) => deleteReview(projectId, reviewId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["dashboard-summary"] });
+      toast("Review deleted. Restorable from Settings for 30 days.");
+    },
+    onError: () => toast("Failed to delete review. Please try again.", "error"),
   });
 
   const { data: githubRepos, isLoading: reposLoading } = useQuery({
@@ -138,7 +135,10 @@ export function ProjectList() {
       queryClient.invalidateQueries({ queryKey: ["dashboard-summary"] });
       setSelectedRepo("");
       setShowConnectForm(false);
-      navigate(`/projects/${project.id}`);
+      // Stay on the dashboard instead of jumping into the new project — same as the
+      // manual-connect flow below. ProjectDetail has no way to disconnect a repo;
+      // the Disconnect button only exists in this page's sidebar list.
+      toast(`${project.repo_owner}/${project.repo_name} connected successfully.`);
     },
     onError: (err: AxiosError<{ detail: string }>) => {
       const detail = err.response?.data?.detail ?? "Failed to connect repo.";
@@ -168,7 +168,7 @@ export function ProjectList() {
     <motion.div {...pageTransition}>
       <header className="dash-header">
         <div>
-          <p className="dash-greeting">{greeting()}{user ? `, ${displayName(user.email)}` : ""}.</p>
+          <p className="dash-greeting">{greeting()}{user ? `, ${user.username}` : ""}.</p>
           <h1>Dashboard</h1>
           <p className="page-subtitle">Here's what's happening across your repos.</p>
         </div>
@@ -193,21 +193,33 @@ export function ProjectList() {
               transition={{ duration: 0.28, delay: i * 0.06 }}
             >
               <span className="stat-card-label">{card.label}</span>
-              <span className="stat-card-value">{card.value}</span>
+              <span className="stat-card-value">
+                <CountUp value={card.value} />
+              </span>
               {card.label === "Findings" && summary.total_findings > 0 ? (
-                <div className="severity-bar">
-                  {SEVERITY_ORDER.filter((s) => summary.findings_by_severity[s]).map((s) => (
-                    <div
-                      key={s}
-                      className="severity-bar-segment"
-                      style={{
-                        flex: summary.findings_by_severity[s],
-                        background: SEVERITY_COLOR[s],
-                      }}
-                      title={`${summary.findings_by_severity[s]} ${s}`}
-                    />
-                  ))}
-                </div>
+                <>
+                  <div className="severity-bar">
+                    {SEVERITY_ORDER.filter((s) => summary.findings_by_severity[s]).map((s) => (
+                      <div
+                        key={s}
+                        className="severity-bar-segment"
+                        style={{
+                          flex: summary.findings_by_severity[s],
+                          background: SEVERITY_COLOR[s],
+                        }}
+                        title={`${summary.findings_by_severity[s]} ${s}`}
+                      />
+                    ))}
+                  </div>
+                  <div className="severity-legend">
+                    {SEVERITY_ORDER.filter((s) => summary.findings_by_severity[s]).map((s) => (
+                      <span key={s} className="severity-legend-item">
+                        <span className="severity-legend-dot" style={{ background: SEVERITY_COLOR[s] }} />
+                        {summary.findings_by_severity[s]} {s}
+                      </span>
+                    ))}
+                  </div>
+                </>
               ) : (
                 <span className="stat-card-sub">{card.sub}</span>
               )}
@@ -215,6 +227,8 @@ export function ProjectList() {
           ))}
         </div>
       )}
+
+      {trend && <FindingsTrendChart points={trend.points} />}
 
       <DashboardChatPanel />
 
@@ -268,6 +282,10 @@ export function ProjectList() {
                       <span className="activity-time">{timeAgo(review.created_at)}</span>
                     </div>
                   </Link>
+                  <ConfirmDeleteButton
+                    onConfirm={() => deleteReviewMutation.mutate({ projectId: review.project_id, reviewId: review.id })}
+                    disabled={deleteReviewMutation.isPending}
+                  />
                 </motion.li>
               ))}
             </ul>
@@ -404,7 +422,7 @@ export function ProjectList() {
             )}
           </AnimatePresence>
 
-          {isLoading && <Spinner label="Loading projects..." />}
+          {isLoading && <SkeletonRows variant="project" />}
 
           {!hasNoProjects && (
             <ul className="project-list">

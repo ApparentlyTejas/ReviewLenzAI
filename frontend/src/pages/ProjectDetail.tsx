@@ -7,6 +7,7 @@ import { listPullRequests, listReviews, triggerReview } from "../api/projects";
 import { BackButton } from "../components/BackButton";
 import { pageTransition } from "../components/pageTransition";
 import { Spinner } from "../components/Spinner";
+import { SkeletonRows } from "../components/Skeleton";
 import { TiltCard } from "../components/TiltCard";
 import { useToast } from "../components/Toast";
 import { usePageTitle } from "../hooks/usePageTitle";
@@ -59,10 +60,13 @@ export function ProjectDetail() {
       <BackButton to="/projects" label="Dashboard" />
       <header className="page-header">
         <h1>Open pull requests</h1>
-        <Link to={`/projects/${id}/reviews`}>View review history</Link>
+        <div className="page-header-actions">
+          <Link to={`/projects/${id}/settings`}>Review settings</Link>
+          <Link to={`/projects/${id}/reviews`}>View review history</Link>
+        </div>
       </header>
 
-      {isLoading && <Spinner label="Loading pull requests..." />}
+      {isLoading && <SkeletonRows variant="row" />}
       {isError && (
         <div className="empty-state-box">
           <p>Could not load pull requests. Your GitHub PAT may have expired, or the repository is inaccessible.</p>

@@ -33,3 +33,20 @@ export async function getCurrentUser(): Promise<User> {
   const { data } = await apiClient.get<User>("/auth/me");
   return data;
 }
+
+export async function changePassword(currentPassword: string, newPassword: string): Promise<void> {
+  await apiClient.post("/auth/password", { current_password: currentPassword, new_password: newPassword });
+}
+
+export async function disconnectGitHub(): Promise<void> {
+  await apiClient.post("/auth/github/disconnect");
+}
+
+export async function deleteAccount(currentPassword?: string): Promise<void> {
+  await apiClient.delete("/auth/account", { data: { current_password: currentPassword } });
+}
+
+export async function updateUsername(username: string): Promise<User> {
+  const { data } = await apiClient.post<User>("/auth/username", { username });
+  return data;
+}

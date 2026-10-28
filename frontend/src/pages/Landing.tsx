@@ -4,6 +4,7 @@ import { Link } from "react-router-dom";
 import { ScrollReveal } from "../components/ScrollReveal";
 import { ConnectIcon, LockIcon, UserIcon } from "../components/Icons";
 import { Logo } from "../components/Logo";
+import { ThemeToggle } from "../components/ThemeToggle";
 import { useAuth } from "../auth/AuthContext";
 
 const STACK = [
@@ -29,7 +30,7 @@ export function Landing() {
       <nav className="landing-nav">
         <span className="landing-nav-brand">
           <Logo size={26} />
-          ReviewLenzAI
+          <span>ReviewLenzAI</span>
         </span>
         <div className="landing-nav-center">
           <a href="#connect">How it works</a>
@@ -37,9 +38,15 @@ export function Landing() {
           <a href="#stack">Stack</a>
         </div>
         <div className="landing-nav-links">
-          <a href="https://github.com/ApparentlyTejas/ai-code-review-assistant" target="_blank" rel="noreferrer">
+          <a
+            className="landing-nav-github"
+            href="https://github.com/ApparentlyTejas/ai-code-review-assistant"
+            target="_blank"
+            rel="noreferrer"
+          >
             GitHub ↗
           </a>
+          <ThemeToggle />
           {user ? (
             <Link to="/projects" className="btn-pill" style={{ padding: "8px 18px", fontSize: 13 }}>
               Dashboard

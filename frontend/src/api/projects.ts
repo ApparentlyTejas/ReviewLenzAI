@@ -1,5 +1,5 @@
 import { apiClient } from "./client";
-import type { Project, PullRequest, Review, ReviewSummary } from "../types";
+import type { DeletedProject, FindingSeverity, Project, ProjectSettings, PullRequest, Review, ReviewSummary } from "../types";
 
 export async function listProjects(): Promise<Project[]> {
   const { data } = await apiClient.get<Project[]>("/projects");
@@ -41,4 +41,61 @@ export async function getReview(projectId: number, reviewId: number): Promise<Re
 
 export async function deleteReview(projectId: number, reviewId: number): Promise<void> {
   await apiClient.delete(`/projects/${projectId}/reviews/${reviewId}`);
+}
+
+export async function postReviewComment(projectId: number, reviewId: number): Promise<{ comment_url: string }> {
+  const { data } = await apiClient.post<{ comment_url: string }>(
+    `/projects/${projectId}/reviews/${reviewId}/post-comment`
+  );
+  return data;
+}
+
+export async function listDeletedProjects(): Promise<DeletedProject[]> {
+  const { data } = await apiClient.get<DeletedProject[]>("/projects/deleted");
+  return data;
+}
+
+export async function restoreProject(projectId: number): Promise<Project> {
+  const { data } = await apiClient.post<Project>(`/projects/${projectId}/restore`);
+  return data;
+}
+
+export interface WebhookStatus {
+  enabled: boolean;
+  webhook_url: string;
+}
+
+export interface WebhookCreated extends WebhookStatus {
+  secret: string;
+}
+
+export async function getWebhookStatus(projectId: number): Promise<WebhookStatus> {
+  const { data } = await apiClient.get<WebhookStatus>(`/projects/${projectId}/webhook`);
+  return data;
+}
+
+export async function enableWebhook(projectId: number): Promise<WebhookCreated> {
+  const { data } = await apiClient.post<WebhookCreated>(`/projects/${projectId}/webhook`);
+  return data;
+}
+
+export async function disableWebhook(projectId: number): Promise<void> {
+  await apiClient.delete(`/projects/${projectId}/webhook`);
+}
+
+export async function getProjectSettings(projectId: number): Promise<ProjectSettings> {
+  const { data } = await apiClient.get<ProjectSettings>(`/projects/${projectId}/settings`);
+  return data;
+}
+
+export async function updateProjectSettings(
+  projectId: number,
+  ignorePatterns: string,
+  minSeverity: FindingSeverity
+): Promise<ProjectSettings> {
+  const { data } = await apiClient.post<ProjectSettings>(`/projects/${projectId}/settings`, {
+    ignore_patterns: ignorePatterns,
+    min_severity: minSeverity,
+  });
+  return data;
 }

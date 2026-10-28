@@ -1,8 +1,10 @@
 export interface User {
   id: number;
   email: string;
+  username: string;
   created_at: string;
   has_github: boolean;
+  has_password: boolean;
 }
 
 export interface Project {
@@ -10,6 +12,19 @@ export interface Project {
   repo_owner: string;
   repo_name: string;
   created_at: string;
+}
+
+export interface DeletedProject {
+  id: number;
+  repo_owner: string;
+  repo_name: string;
+  created_at: string;
+  deleted_at: string;
+}
+
+export interface ProjectSettings {
+  ignore_patterns: string;
+  min_severity: FindingSeverity;
 }
 
 export interface PullRequest {
@@ -34,6 +49,13 @@ export interface Finding {
   suggested_fix: string | null;
 }
 
+export interface ReviewDelta {
+  previous_review_id: number;
+  resolved_count: number;
+  new_finding_ids: number[];
+  unchanged_count: number;
+}
+
 export interface Review {
   id: number;
   project_id: number;
@@ -45,6 +67,8 @@ export interface Review {
   model_used: string;
   created_at: string;
   findings: Finding[];
+  diff_snapshot: string;
+  delta: ReviewDelta | null;
 }
 
 export interface ReviewSummary {
@@ -83,4 +107,24 @@ export interface DashboardSummary {
   total_findings: number;
   findings_by_severity: Partial<Record<FindingSeverity, number>>;
   recent_reviews: RecentReview[];
+}
+
+export interface FindingsTrendPoint {
+  date: string;
+  review_count: number;
+  finding_count: number;
+}
+
+export interface FindingsTrend {
+  points: FindingsTrendPoint[];
+}
+
+export interface DeletedReview {
+  id: number;
+  project_id: number;
+  repo_owner: string;
+  repo_name: string;
+  pr_number: number;
+  pr_title: string;
+  deleted_at: string;
 }
