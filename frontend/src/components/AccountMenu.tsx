@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import { useTheme } from "../theme/ThemeContext";
 import { avatarColor, avatarInitials } from "../lib/avatar";
-import { ChevronDownIcon, HelpIcon, LogOutIcon, MoonIcon, SettingsIcon, SunIcon } from "./Icons";
+import { ChevronDownIcon, HelpIcon, LogOutIcon, MoonIcon, SettingsIcon, SunIcon, UserIcon } from "./Icons";
 
 /** The avatar/email in the navbar, now a proper account dropdown (avatar trigger,
  * email, settings/help, theme, and log out inside a panel) instead of everything
@@ -63,6 +63,10 @@ export function AccountMenu() {
           <Link to="/settings" className="account-menu-item" role="menuitem" onClick={() => setOpen(false)}>
             <SettingsIcon size={15} />
             Settings
+          </Link>
+          <Link to="/team" className="account-menu-item" role="menuitem" onClick={() => setOpen(false)}>
+            <UserIcon size={15} />
+            Team
           </Link>
           <Link to="/help" className="account-menu-item" role="menuitem" onClick={() => setOpen(false)}>
             <HelpIcon size={15} />

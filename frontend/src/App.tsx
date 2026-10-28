@@ -10,6 +10,7 @@ import { Register } from "./pages/Register";
 import { ReviewDetail } from "./pages/ReviewDetail";
 import { ReviewHistory } from "./pages/ReviewHistory";
 import { Settings } from "./pages/Settings";
+import { Team } from "./pages/Team";
 import { Help } from "./pages/Help";
 import { RecentlyDeleted } from "./pages/RecentlyDeleted";
 import { VerifyEmail } from "./pages/VerifyEmail";
@@ -38,6 +39,7 @@ export default function App() {
           <Route path="/projects/:projectId/reviews" element={<ReviewHistory />} />
           <Route path="/projects/:projectId/reviews/:reviewId" element={<ReviewDetail />} />
           <Route path="/settings" element={<Settings />} />
+          <Route path="/team" element={<Team />} />
           <Route path="/settings/recently-deleted" element={<RecentlyDeleted />} />
           <Route path="/help" element={<Help />} />
         </Route>

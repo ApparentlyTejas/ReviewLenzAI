@@ -37,9 +37,9 @@ export function LockIcon() {
   );
 }
 
-export function UserIcon() {
+export function UserIcon({ size }: { size?: number } = {}) {
   return (
-    <svg {...ICON_PROPS}>
+    <svg {...ICON_PROPS} {...(size ? { width: size, height: size } : {})}>
       <circle cx="12" cy="8" r="3.6" />
       <path d="M4.5 20c0-4.1 3.4-7 7.5-7s7.5 2.9 7.5 7" />
     </svg>

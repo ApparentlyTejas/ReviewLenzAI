@@ -8,6 +8,26 @@ export const apiClient = axios.create({
   withCredentials: true,
 });
 
+const ACTIVE_ORG_STORAGE_KEY = "activeOrgId";
+
+export function getActiveOrgId(): number | null {
+  const stored = localStorage.getItem(ACTIVE_ORG_STORAGE_KEY);
+  return stored ? Number(stored) : null;
+}
+
+export function setActiveOrgId(orgId: number | null): void {
+  if (orgId === null) localStorage.removeItem(ACTIVE_ORG_STORAGE_KEY);
+  else localStorage.setItem(ACTIVE_ORG_STORAGE_KEY, String(orgId));
+}
+
+apiClient.interceptors.request.use((config) => {
+  // No header at all (rather than an empty one) means "use my default org" —
+  // the backend falls back to the user's earliest membership in that case.
+  const orgId = getActiveOrgId();
+  if (orgId !== null) config.headers["X-Org-Id"] = orgId;
+  return config;
+});
+
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {

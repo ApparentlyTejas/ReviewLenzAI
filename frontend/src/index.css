@@ -3061,3 +3061,99 @@ kbd {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* ---------- Team / organizations ---------- */
+
+.org-switcher-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  list-style: none;
+  margin: 0 0 20px;
+  padding: 0;
+}
+
+.org-switcher-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  padding: 10px 14px;
+  background: var(--bg-subtle);
+  color: var(--text);
+  border: 1px solid var(--border);
+  box-shadow: none;
+}
+
+.org-switcher-item:hover:not(:disabled) {
+  background: var(--border);
+  transform: none;
+}
+
+.org-switcher-item.active {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 10%, var(--bg-subtle));
+}
+
+.org-member-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.org-member-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.org-member-row:last-child {
+  border-bottom: none;
+}
+
+.org-member-identity {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.org-member-username {
+  font-weight: 500;
+}
+
+.org-member-email {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.org-member-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.org-member-actions select {
+  height: 32px;
+  box-sizing: border-box;
+  padding: 0 8px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 13px;
+}
+
+@media (max-width: 520px) {
+  .org-member-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+}

@@ -7,6 +7,22 @@ export interface User {
   has_password: boolean;
 }
 
+export type MembershipRole = "owner" | "admin" | "member";
+
+export interface Organization {
+  id: number;
+  name: string;
+  role: MembershipRole;
+  created_at: string;
+}
+
+export interface OrgMember {
+  user_id: number;
+  email: string;
+  username: string;
+  role: MembershipRole;
+}
+
 export interface Project {
   id: number;
   repo_owner: string;
