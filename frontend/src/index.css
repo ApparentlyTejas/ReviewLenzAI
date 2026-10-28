@@ -763,6 +763,7 @@ button.danger:hover:not(:disabled) {
 
 .sort-control {
   display: flex;
+  flex-direction: row;
   align-items: center;
   gap: 6px;
   height: 32px;
