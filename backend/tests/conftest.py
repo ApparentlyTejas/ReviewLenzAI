@@ -25,7 +25,9 @@ def create_verified_user(email: str, password: str = "password123") -> None:
     """Insert a pre-verified user directly into the test DB."""
     db = TestingSessionLocal()
     try:
-        user = UserModel(email=email, hashed_password=hash_password(password), is_verified=True)
+        user = UserModel(
+            email=email, username=email.split("@")[0], hashed_password=hash_password(password), is_verified=True
+        )
         db.add(user)
         db.commit()
     finally:

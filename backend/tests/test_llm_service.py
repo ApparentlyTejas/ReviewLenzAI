@@ -5,7 +5,7 @@ import groq
 import httpx
 import pytest
 
-from app.services.llm_service import MAX_DIFF_CHARS, LLMReviewError, _truncate_diff, review_diff
+from app.services.llm_service import MAX_DIFF_CHARS, LLMReviewError, truncate_diff, review_diff
 
 
 def _mock_groq_response(arguments_dict):
@@ -105,14 +105,14 @@ def test_review_diff_retries_once_on_connection_error(mock_groq_cls):
     assert mock_client.chat.completions.create.call_count == 2
 
 
-def test_truncate_diff_under_limit_returned_unchanged():
+def testtruncate_diff_under_limit_returned_unchanged():
     diff = "diff --git a/app.py b/app.py\n+small change"
-    assert _truncate_diff(diff) == diff
+    assert truncate_diff(diff) == diff
 
 
-def test_truncate_diff_over_limit_is_shortened_and_marked():
+def testtruncate_diff_over_limit_is_shortened_and_marked():
     oversized_diff = "diff --git " + ("a/file b/file\n" + ("x" * 200) + "\n") * 1000
-    truncated = _truncate_diff(oversized_diff)
+    truncated = truncate_diff(oversized_diff)
 
     assert len(truncated) < len(oversized_diff)
     assert truncated.endswith("[diff truncated for length]")

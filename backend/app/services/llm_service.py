@@ -54,7 +54,7 @@ class LLMReviewError(Exception):
     """Raised when the LLM call fails or returns an unusable response."""
 
 
-def _truncate_diff(diff_text: str) -> str:
+def truncate_diff(diff_text: str) -> str:
     if len(diff_text) <= MAX_DIFF_CHARS:
         return diff_text
 
@@ -70,7 +70,7 @@ def _truncate_diff(diff_text: str) -> str:
 
 def review_diff(diff_text: str) -> tuple[ReviewFindings, str]:
     """Run the diff through Groq's LLM and return (parsed findings, diff snapshot actually sent)."""
-    diff_snapshot = _truncate_diff(diff_text)
+    diff_snapshot = truncate_diff(diff_text)
     client = groq.Groq(api_key=settings.groq_api_key)
 
     request_kwargs: dict[str, Any] = dict(
@@ -191,7 +191,7 @@ def stream_chat_answer(
     system_prompt = CHAT_SYSTEM_PROMPT_TEMPLATE.format(
         pr_title=pr_title,
         pr_number=pr_number,
-        diff_snapshot=_truncate_diff(diff_snapshot),
+        diff_snapshot=truncate_diff(diff_snapshot),
         findings_text=_format_findings_for_chat(findings),
     )
 

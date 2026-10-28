@@ -7,6 +7,7 @@ from tests.conftest import register_and_login as _register_and_login
 from tests.test_reviews import _create_project, _fake_pr
 
 _REVIEWS_PATCH_TARGET = "app.routers.reviews"
+_RUNNER_PATCH_TARGET = "app.services.review_runner"
 _CHAT_PATCH_TARGET = "app.routers.chat"
 
 
@@ -14,8 +15,8 @@ def _create_completed_review(client, headers, project_id, findings=None):
     with (
         patch(f"{_REVIEWS_PATCH_TARGET}.github_service.get_pull_request") as mock_get_pr,
         patch(f"{_REVIEWS_PATCH_TARGET}.github_service.get_pull_request_diff") as mock_get_diff,
-        patch(f"{_REVIEWS_PATCH_TARGET}.review_diff") as mock_review_diff,
-        patch(f"{_REVIEWS_PATCH_TARGET}.send_review_ready_email"),
+        patch(f"{_RUNNER_PATCH_TARGET}.review_diff") as mock_review_diff,
+        patch(f"{_RUNNER_PATCH_TARGET}.send_review_ready_email"),
     ):
         mock_get_pr.return_value = _fake_pr()
         mock_get_diff.return_value = "diff --git a/app.py b/app.py\n+bug"

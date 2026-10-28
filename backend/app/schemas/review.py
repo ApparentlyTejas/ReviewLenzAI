@@ -22,6 +22,13 @@ class FindingOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class ReviewDeltaOut(BaseModel):
+    previous_review_id: int
+    resolved_count: int
+    new_finding_ids: list[int]
+    unchanged_count: int
+
+
 class ReviewOut(BaseModel):
     id: int
     project_id: int
@@ -33,8 +40,19 @@ class ReviewOut(BaseModel):
     model_used: str
     created_at: datetime
     findings: list[FindingOut] = []
+    # Exactly what the LLM reviewed (possibly truncated for very large diffs —
+    # see _truncate_diff) — not refetched live from GitHub, so findings' file/line
+    # references always match what's actually shown here, even if the PR changed since.
+    diff_snapshot: str
+    # Set only when an earlier completed review of the same PR exists — compares
+    # this review's findings against that one. See review_delta.compute_delta.
+    delta: ReviewDeltaOut | None = None
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class PostCommentOut(BaseModel):
+    comment_url: str
 
 
 class ReviewSummaryOut(BaseModel):
