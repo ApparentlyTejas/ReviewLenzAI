@@ -139,3 +139,52 @@ def test_cannot_use_x_org_id_for_an_org_you_are_not_in(client):
 
     resp = client.get("/projects", headers={**owner_headers, "X-Org-Id": str(other_org_id)})
     assert resp.status_code == 403
+
+
+@patch("app.routers.projects.github_service.validate_repo_access")
+def test_plain_member_cannot_delete_project_or_change_settings_or_webhook(mock_validate, client):
+    owner_headers = _register_and_login(client, "rbac-owner@example.com")
+    _register_and_login(client, "rbac-member@example.com")
+    org_id = client.get("/orgs", headers=owner_headers).json()[0]["id"]
+    client.post(f"/orgs/{org_id}/members", json={"email": "rbac-member@example.com", "role": "member"}, headers=owner_headers)
+
+    project_id = client.post(
+        "/projects",
+        json={"repo_owner": "octocat", "repo_name": "Hello-World", "github_pat": "ghp_fake"},
+        headers=owner_headers,
+    ).json()["id"]
+
+    member_headers = {**_login(client, "rbac-member@example.com"), "X-Org-Id": str(org_id)}
+
+    assert client.delete(f"/projects/{project_id}", headers=member_headers).status_code == 403
+    assert (
+        client.post(
+            f"/projects/{project_id}/settings",
+            json={"ignore_patterns": "", "min_severity": "low"},
+            headers=member_headers,
+        ).status_code
+        == 403
+    )
+    assert client.post(f"/projects/{project_id}/webhook", headers=member_headers).status_code == 403
+    assert client.delete(f"/projects/{project_id}/webhook", headers=member_headers).status_code == 403
+
+    # A member can still read settings and see the project.
+    assert client.get(f"/projects/{project_id}/settings", headers=member_headers).status_code == 200
+    assert client.get("/projects", headers=member_headers).status_code == 200
+
+
+@patch("app.routers.projects.github_service.validate_repo_access")
+def test_admin_member_can_delete_project(mock_validate, client):
+    owner_headers = _register_and_login(client, "rbac-owner2@example.com")
+    _register_and_login(client, "rbac-admin@example.com")
+    org_id = client.get("/orgs", headers=owner_headers).json()[0]["id"]
+    client.post(f"/orgs/{org_id}/members", json={"email": "rbac-admin@example.com", "role": "admin"}, headers=owner_headers)
+
+    project_id = client.post(
+        "/projects",
+        json={"repo_owner": "octocat", "repo_name": "Hello-World", "github_pat": "ghp_fake"},
+        headers=owner_headers,
+    ).json()["id"]
+
+    admin_headers = {**_login(client, "rbac-admin@example.com"), "X-Org-Id": str(org_id)}
+    assert client.delete(f"/projects/{project_id}", headers=admin_headers).status_code == 204

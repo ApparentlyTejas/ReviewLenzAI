@@ -9,7 +9,7 @@ from app.core.database import get_db
 from app.models.organization import Organization
 from app.models.project import Project
 from app.models.user import User
-from app.routers.deps import get_current_org, get_current_user
+from app.routers.deps import get_current_org, get_current_user, require_org_manager
 from app.schemas.project import (
     DeletedProjectOut,
     ProjectCreate,
@@ -194,7 +194,7 @@ def restore_project(
 def delete_project(
     project_id: int,
     db: Session = Depends(get_db),
-    current_org: Organization = Depends(get_current_org),
+    current_org: Organization = Depends(require_org_manager),
 ) -> None:
     project = _get_owned_project(db, project_id, current_org)
     project.deleted_at = datetime.now(UTC)
@@ -216,7 +216,7 @@ def update_project_settings(
     project_id: int,
     payload: ProjectSettingsUpdate,
     db: Session = Depends(get_db),
-    current_org: Organization = Depends(get_current_org),
+    current_org: Organization = Depends(require_org_manager),
 ) -> Project:
     project = _get_owned_project(db, project_id, current_org)
     project.ignore_patterns = payload.ignore_patterns
@@ -244,7 +244,7 @@ def get_webhook_status(
 def enable_webhook(
     project_id: int,
     db: Session = Depends(get_db),
-    current_org: Organization = Depends(get_current_org),
+    current_org: Organization = Depends(require_org_manager),
 ) -> WebhookCreatedOut:
     """(Re)generates this project's webhook secret. The secret is only ever
     returned here — GitHub needs it once, to put in the repo's webhook settings,
@@ -260,7 +260,7 @@ def enable_webhook(
 def disable_webhook(
     project_id: int,
     db: Session = Depends(get_db),
-    current_org: Organization = Depends(get_current_org),
+    current_org: Organization = Depends(require_org_manager),
 ) -> None:
     project = _get_owned_project(db, project_id, current_org)
     project.webhook_secret = None

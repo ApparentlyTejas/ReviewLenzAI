@@ -3,9 +3,11 @@ from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.core.security import decode_access_token
-from app.models.membership import Membership
+from app.models.membership import Membership, MembershipRole
 from app.models.organization import Organization
 from app.models.user import User
+
+_MANAGE_ROLES = (MembershipRole.owner, MembershipRole.admin)
 
 
 def get_current_user(request: Request, db: Session = Depends(get_db)) -> User:
@@ -66,4 +68,18 @@ def get_current_org(
 
     if org is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Organization not found")
+    assert membership is not None
+    # Not a mapped column — just carries the caller's role in this org alongside it,
+    # so a route can require_org_manager() without a second membership query.
+    org.current_user_role = membership.role  # type: ignore[attr-defined]
     return org
+
+
+def require_org_manager(current_org: Organization = Depends(get_current_org)) -> Organization:
+    """Gate for actions that shouldn't be open to every org member: deleting a
+    project, touching its webhook secret, or changing its review settings."""
+    if current_org.current_user_role not in _MANAGE_ROLES:  # type: ignore[attr-defined]
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Only an owner or admin can do this"
+        )
+    return current_org
