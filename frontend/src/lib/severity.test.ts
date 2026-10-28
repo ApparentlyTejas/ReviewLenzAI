@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Finding } from "../types";
-import { SEVERITY_ORDER, sortFindingsBySeverity } from "./severity";
+import { SEVERITY_ORDER, countBySeverity, sortFindingsBySeverity } from "./severity";
 
 function finding(id: number, severity: Finding["severity"]): Pick<Finding, "id" | "severity"> {
   return { id, severity };
@@ -39,5 +39,17 @@ describe("sortFindingsBySeverity", () => {
   it("every known severity has a distinct rank", () => {
     const ranks = Object.values(SEVERITY_ORDER);
     expect(new Set(ranks).size).toBe(ranks.length);
+  });
+});
+
+describe("countBySeverity", () => {
+  it("counts findings per severity level", () => {
+    const input = [finding(1, "high"), finding(2, "critical"), finding(3, "high"), finding(4, "low")];
+
+    expect(countBySeverity(input)).toEqual({ critical: 1, high: 2, medium: 0, low: 1 });
+  });
+
+  it("returns every severity level at 0 for an empty list", () => {
+    expect(countBySeverity([])).toEqual({ critical: 0, high: 0, medium: 0, low: 0 });
   });
 });

@@ -12,7 +12,10 @@ import { Spinner } from "../components/Spinner";
 import { TiltCard } from "../components/TiltCard";
 import { useToast } from "../components/Toast";
 import { reviewToMarkdown } from "../lib/reviewMarkdown";
-import { sortFindingsBySeverity } from "../lib/severity";
+import { countBySeverity, sortFindingsBySeverity } from "../lib/severity";
+import type { FindingSeverity } from "../types";
+
+const SEVERITY_FILTERS: FindingSeverity[] = ["critical", "high", "medium", "low"];
 
 export function ReviewDetail() {
   const { projectId, reviewId } = useParams<{ projectId: string; reviewId: string }>();
@@ -21,6 +24,7 @@ export function ReviewDetail() {
   const { toast } = useToast();
   const [prefill, setPrefill] = useState<string | null>(null);
   const [tab, setTab] = useState<"diff" | "findings">("diff");
+  const [severityFilter, setSeverityFilter] = useState<FindingSeverity | "all">("all");
 
   const { data: review, isLoading } = useQuery({
     queryKey: ["review", id, rId],
@@ -39,6 +43,9 @@ export function ReviewDetail() {
   if (!review) return <p>Review not found.</p>;
 
   const sortedFindings = sortFindingsBySeverity(review.findings);
+  const severityCounts = countBySeverity(sortedFindings);
+  const visibleFindings =
+    severityFilter === "all" ? sortedFindings : sortedFindings.filter((f) => f.severity === severityFilter);
   const reviewMarkdown = reviewToMarkdown(review, sortedFindings);
   const newFindingIds = new Set(review.delta?.new_finding_ids ?? []);
 
@@ -122,17 +129,41 @@ export function ReviewDetail() {
         </div>
       )}
 
+      {review.status === "completed" && sortedFindings.length > 0 && (
+        <div className="severity-filter-row" role="group" aria-label="Filter findings by severity">
+          <button
+            type="button"
+            className={`severity-filter-chip${severityFilter === "all" ? " active" : ""}`}
+            onClick={() => setSeverityFilter("all")}
+          >
+            All ({sortedFindings.length})
+          </button>
+          {SEVERITY_FILTERS.filter((severity) => severityCounts[severity] > 0).map((severity) => (
+            <button
+              key={severity}
+              type="button"
+              className={`severity-filter-chip severity-filter-${severity}${severityFilter === severity ? " active" : ""}`}
+              onClick={() => setSeverityFilter(severity)}
+            >
+              {severity} ({severityCounts[severity]})
+            </button>
+          ))}
+        </div>
+      )}
+
       <div className={review.status === "completed" ? "review-detail-grid" : undefined}>
         {review.status !== "completed" || tab === "diff" ? (
           <DiffViewer
             diffText={review.diff_snapshot}
-            findings={sortedFindings}
+            findings={visibleFindings}
             onAskAboutFinding={askAboutFinding}
             newFindingIds={newFindingIds}
           />
+        ) : visibleFindings.length === 0 ? (
+          <p>No {severityFilter} findings.</p>
         ) : (
           <ul className="finding-list">
-            {sortedFindings.map((finding, index) => (
+            {visibleFindings.map((finding, index) => (
               <TiltCard
                 as="li"
                 key={finding.id}

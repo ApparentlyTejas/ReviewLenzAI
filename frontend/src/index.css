@@ -2825,6 +2825,54 @@ pre {
   box-shadow: var(--shadow-sm);
 }
 
+/* ---------- Review findings severity filter ---------- */
+
+.severity-filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.severity-filter-chip {
+  padding: 6px 14px;
+  background: var(--bg-subtle);
+  color: var(--text-secondary);
+  border-radius: 999px;
+  box-shadow: none;
+  font-size: 12px;
+  font-weight: 500;
+  text-transform: capitalize;
+  transition: background 0.2s var(--ease-smooth), color 0.2s var(--ease-smooth);
+}
+
+.severity-filter-chip:hover {
+  transform: none;
+  box-shadow: none;
+  color: var(--text);
+}
+
+.severity-filter-chip.active {
+  color: #fff;
+}
+
+.severity-filter-chip.active:not(.severity-filter-critical):not(.severity-filter-high):not(.severity-filter-medium):not(.severity-filter-low) {
+  background: var(--text);
+}
+
+.severity-filter-critical.active {
+  background: #c0392b;
+}
+.severity-filter-high.active {
+  background: #e67e22;
+}
+.severity-filter-medium.active {
+  background: #d4a017;
+}
+.severity-filter-low.active {
+  background: #98989d;
+}
+
 .settings-row {
   display: flex;
   align-items: center;
