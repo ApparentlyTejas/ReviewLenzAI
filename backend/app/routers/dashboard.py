@@ -11,7 +11,13 @@ from app.models.project import Project
 from app.models.review import Review
 from app.routers.deps import get_current_org
 from app.routers.projects import RECENTLY_DELETED_RETENTION_DAYS
-from app.schemas.dashboard import DashboardSummary, DeletedReviewOut, FindingsTrendOut, FindingsTrendPoint, RecentReviewOut
+from app.schemas.dashboard import (
+    DashboardSummary,
+    DeletedReviewOut,
+    FindingsTrendOut,
+    FindingsTrendPoint,
+    RecentReviewOut,
+)
 
 router = APIRouter(prefix="/dashboard", tags=["dashboard"])
 

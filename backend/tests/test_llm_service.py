@@ -5,7 +5,7 @@ import groq
 import httpx
 import pytest
 
-from app.services.llm_service import MAX_DIFF_CHARS, LLMReviewError, truncate_diff, review_diff
+from app.services.llm_service import MAX_DIFF_CHARS, LLMReviewError, review_diff, truncate_diff
 
 
 def _mock_groq_response(arguments_dict):

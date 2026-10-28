@@ -11,12 +11,16 @@ from app.models.project import Project
 from app.models.review import Review, ReviewStatus
 from app.models.user import User
 from app.routers.deps import get_current_org, get_current_user
-from app.schemas.review import PostCommentOut, ReviewCreate, ReviewOut, ReviewSummaryOut
+from app.schemas.review import PostCommentOut, ReviewCreate, ReviewDeltaOut, ReviewOut, ReviewSummaryOut
 from app.services import github_service
 from app.services.crypto_service import decrypt_pat
-from app.services.review_delta import compute_delta
+from app.services.review_delta import ReviewDelta, compute_delta
 from app.services.review_markdown import review_to_markdown
 from app.services.review_runner import run_review
+
+
+def _delta_out(delta: ReviewDelta | None) -> ReviewDeltaOut | None:
+    return ReviewDeltaOut(**delta.__dict__) if delta is not None else None
 
 router = APIRouter(prefix="/projects/{project_id}/reviews", tags=["reviews"])
 
@@ -41,7 +45,7 @@ def trigger_review(
     project = _get_owned_project(db, project_id, current_org)
     review = run_review(db, project, payload.pr_number, notify_email=current_user.email)
     out = ReviewOut.model_validate(review)
-    out.delta = compute_delta(db, review)
+    out.delta = _delta_out(compute_delta(db, review))
     return out
 
 
@@ -88,7 +92,7 @@ def get_review(
     if review is None or review.project_id != project.id or review.deleted_at is not None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Review not found")
     out = ReviewOut.model_validate(review)
-    out.delta = compute_delta(db, review)
+    out.delta = _delta_out(compute_delta(db, review))
     return out
 
 
