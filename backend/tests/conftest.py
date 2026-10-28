@@ -10,6 +10,7 @@ from app.core.security import hash_password
 from app.core.streaming import get_session_factory
 from app.main import app
 from app.models.user import User as UserModel
+from app.services.org_service import create_personal_organization
 
 limiter.enabled = False
 
@@ -29,6 +30,8 @@ def create_verified_user(email: str, password: str = "password123") -> None:
             email=email, username=email.split("@")[0], hashed_password=hash_password(password), is_verified=True
         )
         db.add(user)
+        db.flush()
+        create_personal_organization(db, user)
         db.commit()
     finally:
         db.close()
@@ -37,6 +40,11 @@ def create_verified_user(email: str, password: str = "password123") -> None:
 def register_and_login(client: TestClient, email: str, password: str = "password123") -> dict:
     """Create a verified user and return Bearer auth headers."""
     create_verified_user(email, password)
+    return login(client, email, password)
+
+
+def login(client: TestClient, email: str, password: str = "password123") -> dict:
+    """Log in an already-existing user and return Bearer auth headers."""
     resp = client.post("/auth/login", json={"email": email, "password": password})
     return {"Authorization": f"Bearer {resp.json()['access_token']}"}
 

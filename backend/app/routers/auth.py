@@ -25,6 +25,7 @@ from app.schemas.auth import (
 )
 from app.services.crypto_service import encrypt_pat
 from app.services.email_service import send_verification_email, send_welcome_email
+from app.services.org_service import create_personal_organization
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -63,6 +64,8 @@ def register(request: Request, payload: UserRegister, db: Session = Depends(get_
         is_verified=True,
     )
     db.add(user)
+    db.flush()
+    create_personal_organization(db, user)
     db.commit()
 
     try:
@@ -149,6 +152,8 @@ def google_login(request: Request, response: Response, payload: GooglePayload, d
         username = id_info.get("given_name") or id_info.get("name") or _default_username(email)
         user = User(email=email, username=username[:50], hashed_password="", is_verified=True)
         db.add(user)
+        db.flush()
+        create_personal_organization(db, user)
         db.commit()
         db.refresh(user)
 
@@ -217,6 +222,8 @@ def github_login(request: Request, response: Response, payload: GitHubPayload, d
         username = github_user.get("login") or github_user.get("name") or _default_username(email)
         user = User(email=email, username=username[:50], hashed_password="", is_verified=True)
         db.add(user)
+        db.flush()
+        create_personal_organization(db, user)
 
     assert user is not None
     user.github_access_token = encrypt_pat(access_token)

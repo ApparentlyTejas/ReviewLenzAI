@@ -13,7 +13,7 @@ from app import models  # noqa: F401 — register models with Base before create
 from app.core.config import settings
 from app.core.database import Base, engine, get_db
 from app.core.limiter import limiter
-from app.routers import auth, chat, dashboard, dashboard_chat, github, projects, reviews, webhooks
+from app.routers import auth, chat, dashboard, dashboard_chat, github, orgs, projects, reviews, webhooks
 
 
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
@@ -60,6 +60,7 @@ app.add_middleware(
 
 app.include_router(auth.router)
 app.include_router(github.router)
+app.include_router(orgs.router)
 app.include_router(projects.router)
 app.include_router(reviews.router)
 app.include_router(chat.router)

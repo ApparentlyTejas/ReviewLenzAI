@@ -9,19 +9,19 @@ from app.core.database import get_db
 from app.core.limiter import limiter
 from app.core.streaming import get_session_factory, sse_event
 from app.models.chat_message import ChatMessage, ChatRole
+from app.models.organization import Organization
 from app.models.project import Project
 from app.models.review import Review
-from app.models.user import User
-from app.routers.deps import get_current_user
+from app.routers.deps import get_current_org
 from app.schemas.chat import ChatMessageCreate, ChatMessageOut
 from app.services.llm_service import LLMReviewError, stream_chat_answer
 
 router = APIRouter(prefix="/projects/{project_id}/reviews/{review_id}/chat", tags=["chat"])
 
 
-def _get_owned_review(db: Session, project_id: int, review_id: int, user: User) -> Review:
+def _get_owned_review(db: Session, project_id: int, review_id: int, org: Organization) -> Review:
     project = db.get(Project, project_id)
-    if project is None or project.user_id != user.id:
+    if project is None or project.org_id != org.id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
     review = db.get(Review, review_id)
     if review is None or review.project_id != project.id:
@@ -34,9 +34,9 @@ def list_chat_messages(
     project_id: int,
     review_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_org: Organization = Depends(get_current_org),
 ) -> list[ChatMessage]:
-    review = _get_owned_review(db, project_id, review_id, current_user)
+    review = _get_owned_review(db, project_id, review_id, current_org)
     return review.chat_messages
 
 
@@ -45,9 +45,9 @@ def clear_chat_messages(
     project_id: int,
     review_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_org: Organization = Depends(get_current_org),
 ) -> None:
-    review = _get_owned_review(db, project_id, review_id, current_user)
+    review = _get_owned_review(db, project_id, review_id, current_org)
     db.query(ChatMessage).filter(ChatMessage.review_id == review.id).delete()
     db.commit()
 
@@ -125,10 +125,10 @@ def send_chat_message(
     review_id: int,
     payload: ChatMessageCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_org: Organization = Depends(get_current_org),
     session_factory: Callable[[], Session] = Depends(get_session_factory),
 ) -> StreamingResponse:
-    review = _get_owned_review(db, project_id, review_id, current_user)
+    review = _get_owned_review(db, project_id, review_id, current_org)
 
     if review.status != "completed":
         raise HTTPException(

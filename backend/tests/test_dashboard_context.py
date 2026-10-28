@@ -1,6 +1,7 @@
 from unittest.mock import patch
 
 from app.models.finding import Finding, FindingCategory, FindingSeverity
+from app.models.membership import Membership
 from app.models.review import Review, ReviewStatus
 from app.services.dashboard_context import (
     MAX_FINDINGS_IN_CONTEXT,
@@ -9,11 +10,16 @@ from app.services.dashboard_context import (
 from tests.conftest import register_and_login as _register_and_login
 
 
+def _org_id_for(db_session, user_id: int) -> int:
+    return db_session.query(Membership).filter(Membership.user_id == user_id).first().org_id
+
+
 def test_build_dashboard_context_with_no_projects(client, db_session):
     headers = _register_and_login(client, "ctx-empty@example.com")
     user_id = client.get("/auth/me", headers=headers).json()["id"]
+    org_id = _org_id_for(db_session, user_id)
 
-    context = build_dashboard_context(db_session, user_id)
+    context = build_dashboard_context(db_session, org_id)
 
     assert context.has_any_data is False
     assert "not connected" in context.summary_text
@@ -23,6 +29,7 @@ def test_build_dashboard_context_with_no_projects(client, db_session):
 def test_build_dashboard_context_includes_repo_and_findings(mock_validate, client, db_session):
     headers = _register_and_login(client, "ctx-data@example.com")
     user_id = client.get("/auth/me", headers=headers).json()["id"]
+    org_id = _org_id_for(db_session, user_id)
 
     project_id = client.post(
         "/projects",
@@ -64,7 +71,7 @@ def test_build_dashboard_context_includes_repo_and_findings(mock_validate, clien
     )
     db_session.commit()
 
-    context = build_dashboard_context(db_session, user_id)
+    context = build_dashboard_context(db_session, org_id)
 
     assert context.has_any_data is True
     assert "octocat/Hello-World" in context.summary_text

@@ -9,8 +9,9 @@ from app.core.limiter import limiter
 from app.core.streaming import get_session_factory, sse_event
 from app.models.chat_message import ChatRole
 from app.models.dashboard_chat_message import DashboardChatMessage
+from app.models.organization import Organization
 from app.models.user import User
-from app.routers.deps import get_current_user
+from app.routers.deps import get_current_org, get_current_user
 from app.schemas.chat import ChatMessageCreate, ChatMessageOut
 from app.services.dashboard_context import build_dashboard_context
 from app.services.llm_service import LLMReviewError, stream_dashboard_answer
@@ -38,6 +39,7 @@ def clear_dashboard_chat_messages(
 def _stream_dashboard_chat_response(
     *,
     user_id: int,
+    org_id: int,
     question: str,
     session_factory: Callable[[], Session],
 ) -> Generator[str, None, None]:
@@ -57,8 +59,9 @@ def _stream_dashboard_chat_response(
 
         # Built fresh here (not from the route's own request) so it reflects the
         # latest reviews/findings even if a review completed between page load and
-        # the user asking a question.
-        context = build_dashboard_context(db, user_id)
+        # the user asking a question. Scoped to the org (not just this user) since
+        # projects are now org-owned and may be shared with teammates.
+        context = build_dashboard_context(db, org_id)
 
         user_message = DashboardChatMessage(user_id=user_id, role=ChatRole.user, content=question)
         db.add(user_message)
@@ -105,11 +108,13 @@ def send_dashboard_chat_message(
     request: Request,
     payload: ChatMessageCreate,
     current_user: User = Depends(get_current_user),
+    current_org: Organization = Depends(get_current_org),
     session_factory: Callable[[], Session] = Depends(get_session_factory),
 ) -> StreamingResponse:
     return StreamingResponse(
         _stream_dashboard_chat_response(
             user_id=current_user.id,
+            org_id=current_org.id,
             question=payload.content,
             session_factory=session_factory,
         ),

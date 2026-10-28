@@ -6,10 +6,11 @@ from sqlalchemy.orm import Session
 from app.core.config import settings
 from app.core.database import get_db
 from app.core.limiter import limiter
+from app.models.organization import Organization
 from app.models.project import Project
 from app.models.review import Review, ReviewStatus
 from app.models.user import User
-from app.routers.deps import get_current_user
+from app.routers.deps import get_current_org, get_current_user
 from app.schemas.review import PostCommentOut, ReviewCreate, ReviewOut, ReviewSummaryOut
 from app.services import github_service
 from app.services.crypto_service import decrypt_pat
@@ -20,9 +21,9 @@ from app.services.review_runner import run_review
 router = APIRouter(prefix="/projects/{project_id}/reviews", tags=["reviews"])
 
 
-def _get_owned_project(db: Session, project_id: int, user: User) -> Project:
+def _get_owned_project(db: Session, project_id: int, org: Organization) -> Project:
     project = db.get(Project, project_id)
-    if project is None or project.user_id != user.id or project.deleted_at is not None:
+    if project is None or project.org_id != org.id or project.deleted_at is not None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
     return project
 
@@ -35,8 +36,9 @@ def trigger_review(
     payload: ReviewCreate,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
+    current_org: Organization = Depends(get_current_org),
 ) -> ReviewOut:
-    project = _get_owned_project(db, project_id, current_user)
+    project = _get_owned_project(db, project_id, current_org)
     review = run_review(db, project, payload.pr_number, notify_email=current_user.email)
     out = ReviewOut.model_validate(review)
     out.delta = compute_delta(db, review)
@@ -45,9 +47,11 @@ def trigger_review(
 
 @router.get("", response_model=list[ReviewSummaryOut])
 def list_reviews(
-    project_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)
+    project_id: int,
+    db: Session = Depends(get_db),
+    current_org: Organization = Depends(get_current_org),
 ) -> list[dict]:
-    project = _get_owned_project(db, project_id, current_user)
+    project = _get_owned_project(db, project_id, current_org)
     # created_at alone isn't a reliable sort key: two reviews created within
     # the same second (SQLite's func.now() only has second resolution, and
     # even Postgres timestamps can tie under concurrent requests) sort
@@ -77,9 +81,9 @@ def get_review(
     project_id: int,
     review_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_org: Organization = Depends(get_current_org),
 ) -> ReviewOut:
-    project = _get_owned_project(db, project_id, current_user)
+    project = _get_owned_project(db, project_id, current_org)
     review = db.get(Review, review_id)
     if review is None or review.project_id != project.id or review.deleted_at is not None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Review not found")
@@ -93,9 +97,9 @@ def delete_review(
     project_id: int,
     review_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_org: Organization = Depends(get_current_org),
 ) -> None:
-    project = _get_owned_project(db, project_id, current_user)
+    project = _get_owned_project(db, project_id, current_org)
     review = db.get(Review, review_id)
     if review is None or review.project_id != project.id or review.deleted_at is not None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Review not found")
@@ -108,9 +112,9 @@ def post_review_comment(
     project_id: int,
     review_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_org: Organization = Depends(get_current_org),
 ) -> PostCommentOut:
-    project = _get_owned_project(db, project_id, current_user)
+    project = _get_owned_project(db, project_id, current_org)
     review = db.get(Review, review_id)
     if review is None or review.project_id != project.id or review.deleted_at is not None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Review not found")

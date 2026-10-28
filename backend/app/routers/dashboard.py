@@ -6,10 +6,10 @@ from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.models.finding import Finding
+from app.models.organization import Organization
 from app.models.project import Project
 from app.models.review import Review
-from app.models.user import User
-from app.routers.deps import get_current_user
+from app.routers.deps import get_current_org
 from app.routers.projects import RECENTLY_DELETED_RETENTION_DAYS
 from app.schemas.dashboard import DashboardSummary, DeletedReviewOut, FindingsTrendOut, FindingsTrendPoint, RecentReviewOut
 
@@ -17,11 +17,13 @@ router = APIRouter(prefix="/dashboard", tags=["dashboard"])
 
 
 @router.get("/summary", response_model=DashboardSummary)
-def get_summary(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)) -> DashboardSummary:
+def get_summary(
+    db: Session = Depends(get_db), current_org: Organization = Depends(get_current_org)
+) -> DashboardSummary:
     project_ids = [
         pid
         for (pid,) in db.query(Project.id)
-        .filter(Project.user_id == current_user.id, Project.deleted_at.is_(None))
+        .filter(Project.org_id == current_org.id, Project.deleted_at.is_(None))
         .all()
     ]
 
@@ -87,7 +89,7 @@ FINDINGS_TREND_DAYS = 30
 
 @router.get("/findings-trend", response_model=FindingsTrendOut)
 def get_findings_trend(
-    db: Session = Depends(get_db), current_user: User = Depends(get_current_user)
+    db: Session = Depends(get_db), current_org: Organization = Depends(get_current_org)
 ) -> FindingsTrendOut:
     """Per-day review/finding counts for the last FINDINGS_TREND_DAYS days, for the
     dashboard's trend sparkline. Built from already-loaded review.findings (same
@@ -96,7 +98,7 @@ def get_findings_trend(
     project_ids = [
         pid
         for (pid,) in db.query(Project.id)
-        .filter(Project.user_id == current_user.id, Project.deleted_at.is_(None))
+        .filter(Project.org_id == current_org.id, Project.deleted_at.is_(None))
         .all()
     ]
 
@@ -131,7 +133,7 @@ def get_findings_trend(
 
 @router.get("/deleted-reviews", response_model=list[DeletedReviewOut])
 def list_deleted_reviews(
-    db: Session = Depends(get_db), current_user: User = Depends(get_current_user)
+    db: Session = Depends(get_db), current_org: Organization = Depends(get_current_org)
 ) -> list[DeletedReviewOut]:
     # Only reviews deleted on their own, scoped to still-connected projects — a
     # review whose project was disconnected shows up under the project's own
@@ -140,7 +142,7 @@ def list_deleted_reviews(
     expired = (
         db.query(Review)
         .join(Project, Review.project_id == Project.id)
-        .filter(Project.user_id == current_user.id, Review.deleted_at.isnot(None), Review.deleted_at < cutoff)
+        .filter(Project.org_id == current_org.id, Review.deleted_at.isnot(None), Review.deleted_at < cutoff)
         .all()
     )
     for review in expired:
@@ -152,7 +154,7 @@ def list_deleted_reviews(
         db.query(Review, Project)
         .join(Project, Review.project_id == Project.id)
         .filter(
-            Project.user_id == current_user.id,
+            Project.org_id == current_org.id,
             Project.deleted_at.is_(None),
             Review.deleted_at.isnot(None),
         )
@@ -175,12 +177,12 @@ def list_deleted_reviews(
 
 @router.post("/deleted-reviews/{review_id}/restore", response_model=RecentReviewOut)
 def restore_review(
-    review_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)
+    review_id: int, db: Session = Depends(get_db), current_org: Organization = Depends(get_current_org)
 ) -> RecentReviewOut:
     row = (
         db.query(Review, Project)
         .join(Project, Review.project_id == Project.id)
-        .filter(Review.id == review_id, Project.user_id == current_user.id, Review.deleted_at.isnot(None))
+        .filter(Review.id == review_id, Project.org_id == current_org.id, Review.deleted_at.isnot(None))
         .first()
     )
     if row is None:

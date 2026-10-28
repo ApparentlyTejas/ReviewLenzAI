@@ -23,16 +23,16 @@ class DashboardContext:
     has_any_data: bool
 
 
-def build_dashboard_context(db: Session, user_id: int) -> DashboardContext:
+def build_dashboard_context(db: Session, org_id: int) -> DashboardContext:
     """Gathers a snapshot of everything the dashboard assistant should ground its
     answers in: per-project stats, recent reviews, and the most severe open findings.
     Built fresh per request (not cached) since it needs to reflect the latest reviews.
     """
-    projects = db.query(Project).filter(Project.user_id == user_id).all()
+    projects = db.query(Project).filter(Project.org_id == org_id).all()
 
     if not projects:
         return DashboardContext(
-            summary_text="This user has not connected any repositories yet.",
+            summary_text="This organization has not connected any repositories yet.",
             has_any_data=False,
         )
 

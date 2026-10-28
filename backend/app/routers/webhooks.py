@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.core.limiter import limiter
 from app.models.project import Project
+from app.services.org_service import get_org_owner_email
 from app.services.review_runner import run_review
 
 router = APIRouter(prefix="/webhooks", tags=["webhooks"])
@@ -51,5 +52,5 @@ async def github_webhook(
     if pr_number is None:
         return {"status": "ignored"}
 
-    run_review(db, project, pr_number, notify_email=project.user.email)
+    run_review(db, project, pr_number, notify_email=get_org_owner_email(db, project.org_id))
     return {"status": "review_triggered"}

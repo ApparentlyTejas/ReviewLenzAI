@@ -9,16 +9,16 @@ from app.core.database import Base
 from app.models.finding import FindingSeverity
 
 if TYPE_CHECKING:
+    from app.models.organization import Organization
     from app.models.review import Review
-    from app.models.user import User
 
 
 class Project(Base):
     __tablename__ = "projects"
-    __table_args__ = (UniqueConstraint("user_id", "repo_owner", "repo_name", name="uq_project_user_repo"),)
+    __table_args__ = (UniqueConstraint("org_id", "repo_owner", "repo_name", name="uq_project_org_repo"),)
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    org_id: Mapped[int] = mapped_column(ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False)
     repo_owner: Mapped[str] = mapped_column(String(255), nullable=False)
     repo_name: Mapped[str] = mapped_column(String(255), nullable=False)
     encrypted_pat: Mapped[str] = mapped_column(String(512), nullable=False)
@@ -40,5 +40,5 @@ class Project(Base):
     # grant any access itself.
     webhook_secret: Mapped[str | None] = mapped_column(String(64), nullable=True)
 
-    user: Mapped["User"] = relationship(back_populates="projects")
+    organization: Mapped["Organization"] = relationship(back_populates="projects")
     reviews: Mapped[list["Review"]] = relationship(back_populates="project", cascade="all, delete-orphan")

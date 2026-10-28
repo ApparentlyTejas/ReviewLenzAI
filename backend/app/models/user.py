@@ -8,7 +8,7 @@ from app.core.database import Base
 
 if TYPE_CHECKING:
     from app.models.dashboard_chat_message import DashboardChatMessage
-    from app.models.project import Project
+    from app.models.membership import Membership
 
 
 class User(Base):
@@ -36,7 +36,7 @@ class User(Base):
         # no password to change until they set one, which isn't supported yet.
         return bool(self.hashed_password)
 
-    projects: Mapped[list["Project"]] = relationship(back_populates="user", cascade="all, delete-orphan")
+    memberships: Mapped[list["Membership"]] = relationship(back_populates="user", cascade="all, delete-orphan")
     dashboard_chat_messages: Mapped[list["DashboardChatMessage"]] = relationship(
         back_populates="user", cascade="all, delete-orphan", order_by="DashboardChatMessage.id"
     )
