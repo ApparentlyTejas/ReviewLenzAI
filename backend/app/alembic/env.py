@@ -4,13 +4,15 @@ from alembic import context
 from sqlalchemy import engine_from_config, pool
 
 from app import models  # noqa: F401  (ensures all models are registered on Base.metadata)
-from app.core.config import settings
-from app.core.database import Base
+from app.core.database import Base, engine
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config
-config.set_main_option("sqlalchemy.url", settings.database_url)
+# Use the same engine URL as the app (driver pinned to psycopg2), not the raw
+# settings.database_url, so Alembic doesn't hit SQLAlchemy 2.1's psycopg(v3)
+# default for a bare postgresql:// URL.
+config.set_main_option("sqlalchemy.url", engine.url.render_as_string(hide_password=False))
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.
