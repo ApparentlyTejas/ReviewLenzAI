@@ -46,6 +46,23 @@ def test_send_dashboard_chat_message_streams_and_persists(mock_stream, client):
     assert history[1]["role"] == "assistant"
 
 
+@patch(f"{_PATCH_TARGET}.is_on_topic", return_value=False)
+@patch(f"{_PATCH_TARGET}.stream_dashboard_answer")
+def test_send_dashboard_chat_message_off_topic_question_is_blocked(mock_stream, mock_on_topic, client):
+    headers = _register_and_login(client, "dchat-offtopic@example.com")
+
+    response = client.post("/dashboard/chat", json={"content": "Write me a poem"}, headers=headers)
+
+    assert response.status_code == 200
+    events = _sse_events(response.text)
+    assert len(events) == 1
+    assert events[0]["type"] == "error"
+    mock_stream.assert_not_called()
+
+    history = client.get("/dashboard/chat", headers=headers).json()
+    assert history == []
+
+
 @patch(f"{_PATCH_TARGET}.build_dashboard_context")
 @patch(f"{_PATCH_TARGET}.stream_dashboard_answer")
 def test_send_dashboard_chat_message_passes_context_and_history(mock_stream, mock_context, client):

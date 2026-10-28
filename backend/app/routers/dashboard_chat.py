@@ -14,9 +14,12 @@ from app.models.user import User
 from app.routers.deps import get_current_org, get_current_user
 from app.schemas.chat import ChatMessageCreate, ChatMessageOut
 from app.services.dashboard_context import build_dashboard_context
-from app.services.llm_service import LLMReviewError, stream_dashboard_answer
+from app.services.llm_service import LLMReviewError, is_on_topic, stream_dashboard_answer
 
 router = APIRouter(prefix="/dashboard/chat", tags=["dashboard-chat"])
+
+_TOPIC = "the user's connected repositories, their code reviews, and the findings reported on them"
+_OFF_TOPIC_MESSAGE = "I can only help with questions about your connected repositories, reviews, and findings."
 
 
 @router.get("", response_model=list[ChatMessageOut])
@@ -47,6 +50,10 @@ def _stream_dashboard_chat_response(
     — see that docstring for why this can't reuse the route's Depends(get_db) session."""
     db = session_factory()
     try:
+        if not is_on_topic(question, _TOPIC):
+            yield sse_event("error", detail=_OFF_TOPIC_MESSAGE)
+            return
+
         history = [
             {"role": m.role.value, "content": m.content}
             for m in (

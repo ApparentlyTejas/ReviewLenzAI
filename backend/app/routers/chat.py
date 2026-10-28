@@ -14,9 +14,12 @@ from app.models.project import Project
 from app.models.review import Review
 from app.routers.deps import get_current_org
 from app.schemas.chat import ChatMessageCreate, ChatMessageOut
-from app.services.llm_service import LLMReviewError, stream_chat_answer
+from app.services.llm_service import LLMReviewError, is_on_topic, stream_chat_answer
 
 router = APIRouter(prefix="/projects/{project_id}/reviews/{review_id}/chat", tags=["chat"])
+
+_TOPIC = "the specific pull request under review — its diff and the code review findings already reported on it"
+_OFF_TOPIC_MESSAGE = "I can only help with questions about this pull request's diff and its review findings."
 
 
 def _get_owned_review(db: Session, project_id: int, review_id: int, org: Organization) -> Review:
@@ -70,6 +73,10 @@ def _stream_chat_response(
     """
     db = session_factory()
     try:
+        if not is_on_topic(question, _TOPIC):
+            yield sse_event("error", detail=_OFF_TOPIC_MESSAGE)
+            return
+
         history = [
             {"role": m.role.value, "content": m.content}
             for m in (

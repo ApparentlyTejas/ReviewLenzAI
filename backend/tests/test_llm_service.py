@@ -5,7 +5,13 @@ import groq
 import httpx
 import pytest
 
-from app.services.llm_service import MAX_DIFF_CHARS, LLMReviewError, review_diff, truncate_diff
+from app.services.llm_service import MAX_DIFF_CHARS, LLMReviewError, is_on_topic, review_diff, truncate_diff
+
+
+def _mock_classifier_response(content: str):
+    response = MagicMock()
+    response.choices[0].message.content = content
+    return response
 
 
 def _mock_groq_response(arguments_dict):
@@ -103,6 +109,35 @@ def test_review_diff_retries_once_on_connection_error(mock_groq_cls):
 
     assert findings.findings == []
     assert mock_client.chat.completions.create.call_count == 2
+
+
+@patch("app.services.llm_service.groq.Groq")
+def test_is_on_topic_allows_a_yes_verdict(mock_groq_cls):
+    mock_client = MagicMock()
+    mock_client.chat.completions.create.return_value = _mock_classifier_response("YES")
+    mock_groq_cls.return_value = mock_client
+
+    assert is_on_topic("Why was this flagged as a bug?", "this pull request") is True
+
+
+@patch("app.services.llm_service.groq.Groq")
+def test_is_on_topic_blocks_a_no_verdict(mock_groq_cls):
+    mock_client = MagicMock()
+    mock_client.chat.completions.create.return_value = _mock_classifier_response("NO")
+    mock_groq_cls.return_value = mock_client
+
+    assert is_on_topic("What's the capital of France?", "this pull request") is False
+
+
+@patch("app.services.llm_service.groq.Groq")
+def test_is_on_topic_fails_open_on_api_error(mock_groq_cls):
+    mock_client = MagicMock()
+    mock_client.chat.completions.create.side_effect = groq.APIConnectionError(
+        request=httpx.Request("POST", "https://api.groq.com")
+    )
+    mock_groq_cls.return_value = mock_client
+
+    assert is_on_topic("Anything", "this pull request") is True
 
 
 def testtruncate_diff_under_limit_returned_unchanged():

@@ -1,3 +1,5 @@
+from unittest.mock import patch
+
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
@@ -66,6 +68,19 @@ def _setup_database():
     Base.metadata.create_all(bind=engine)
     yield
     Base.metadata.drop_all(bind=engine)
+
+
+@pytest.fixture(autouse=True)
+def _default_on_topic():
+    """Chat tests exercise stream_chat_answer/stream_dashboard_answer directly and
+    don't care about the is_on_topic gate in front of them — default it to "yes"
+    everywhere so those tests don't need their own patch, and so none of them make
+    a real Groq call. Tests that specifically cover the gate override this."""
+    with (
+        patch("app.routers.chat.is_on_topic", return_value=True),
+        patch("app.routers.dashboard_chat.is_on_topic", return_value=True),
+    ):
+        yield
 
 
 @pytest.fixture

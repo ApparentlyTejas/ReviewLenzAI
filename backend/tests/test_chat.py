@@ -160,6 +160,29 @@ def test_send_chat_message_llm_failure_after_partial_content_keeps_deltas_but_no
     assert history == []
 
 
+@patch(f"{_CHAT_PATCH_TARGET}.is_on_topic", return_value=False)
+@patch(f"{_CHAT_PATCH_TARGET}.stream_chat_answer")
+def test_send_chat_message_off_topic_question_is_blocked_before_calling_the_model(mock_stream, mock_on_topic, client):
+    headers = _register_and_login(client, "chat-offtopic@example.com")
+    project_id = _create_project(client, headers)
+    review_id = _create_completed_review(client, headers, project_id)
+
+    response = client.post(
+        f"/projects/{project_id}/reviews/{review_id}/chat",
+        json={"content": "What's the capital of France?"},
+        headers=headers,
+    )
+
+    assert response.status_code == 200
+    events = _sse_events(response.text)
+    assert len(events) == 1
+    assert events[0]["type"] == "error"
+    mock_stream.assert_not_called()
+
+    history = client.get(f"/projects/{project_id}/reviews/{review_id}/chat", headers=headers).json()
+    assert history == []
+
+
 def test_send_chat_message_requires_auth(client):
     response = client.post("/projects/1/reviews/1/chat", json={"content": "hi"})
     assert response.status_code == 401
