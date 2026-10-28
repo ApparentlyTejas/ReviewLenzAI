@@ -13,9 +13,12 @@ from app.core.security import create_access_token, hash_password, verify_passwor
 from app.models.user import User
 from app.routers.deps import get_current_user
 from app.schemas.auth import (
+    ChangePasswordRequest,
+    DeleteAccountRequest,
     RegisterResponse,
     ResendVerificationRequest,
     TokenResponse,
+    UpdateUsernameRequest,
     UserLogin,
     UserOut,
     UserRegister,
@@ -31,6 +34,10 @@ _COOKIE_KWARGS: dict[str, Any] = {
     "secure": settings.cookie_secure,
     "samesite": _SAMESITE,
 }
+
+
+def _default_username(email: str) -> str:
+    return email.split("@")[0][:50]
 
 
 def _set_auth_cookies(response: Response, token: str) -> None:
@@ -51,6 +58,7 @@ def register(request: Request, payload: UserRegister, db: Session = Depends(get_
 
     user = User(
         email=payload.email,
+        username=_default_username(payload.email),
         hashed_password=hash_password(payload.password),
         is_verified=True,
     )
@@ -138,7 +146,8 @@ def google_login(request: Request, response: Response, payload: GooglePayload, d
     is_new = user is None
 
     if is_new:
-        user = User(email=email, hashed_password="", is_verified=True)
+        username = id_info.get("given_name") or id_info.get("name") or _default_username(email)
+        user = User(email=email, username=username[:50], hashed_password="", is_verified=True)
         db.add(user)
         db.commit()
         db.refresh(user)
@@ -205,7 +214,8 @@ def github_login(request: Request, response: Response, payload: GitHubPayload, d
     is_new = user is None
 
     if is_new:
-        user = User(email=email, hashed_password="", is_verified=True)
+        username = github_user.get("login") or github_user.get("name") or _default_username(email)
+        user = User(email=email, username=username[:50], hashed_password="", is_verified=True)
         db.add(user)
 
     assert user is not None
@@ -253,3 +263,61 @@ def logout(response: Response) -> None:
 @router.get("/me", response_model=UserOut)
 def me(current_user: User = Depends(get_current_user)) -> User:
     return current_user
+
+
+@router.post("/username", response_model=UserOut)
+def update_username(
+    payload: UpdateUsernameRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> User:
+    current_user.username = payload.username
+    db.commit()
+    db.refresh(current_user)
+    return current_user
+
+
+@router.post("/password", status_code=status.HTTP_204_NO_CONTENT)
+@limiter.limit("5/minute")
+def change_password(
+    request: Request,
+    payload: ChangePasswordRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> None:
+    if not current_user.has_password:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="This account signed in with Google or GitHub and has no password to change.",
+        )
+    if not verify_password(payload.current_password, current_user.hashed_password):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Current password is incorrect.")
+
+    current_user.hashed_password = hash_password(payload.new_password)
+    db.commit()
+
+
+@router.post("/github/disconnect", status_code=status.HTTP_204_NO_CONTENT)
+def github_disconnect(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)) -> None:
+    current_user.github_access_token = None
+    db.commit()
+
+
+@router.delete("/account", status_code=status.HTTP_204_NO_CONTENT)
+@limiter.limit("5/minute")
+def delete_account(
+    request: Request,
+    payload: DeleteAccountRequest,
+    response: Response,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> None:
+    if current_user.has_password:
+        if not payload.current_password or not verify_password(payload.current_password, current_user.hashed_password):
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Current password is incorrect.")
+
+    db.delete(current_user)
+    db.commit()
+
+    response.delete_cookie(key="access_token", **_COOKIE_KWARGS)
+    response.delete_cookie(key="auth_hint", httponly=False, secure=settings.cookie_secure, samesite=_SAMESITE)

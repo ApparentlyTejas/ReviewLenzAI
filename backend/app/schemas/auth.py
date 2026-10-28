@@ -25,6 +25,24 @@ _DISPOSABLE_DOMAINS = {
 }
 
 
+def _validate_password_strength(v: str) -> str:
+    import re
+    errors = []
+    if len(v) < 8:
+        errors.append("at least 8 characters")
+    if not re.search(r"[A-Z]", v):
+        errors.append("one uppercase letter")
+    if not re.search(r"[a-z]", v):
+        errors.append("one lowercase letter")
+    if not re.search(r"[0-9]", v):
+        errors.append("one number")
+    if not re.search(r"[^A-Za-z0-9]", v):
+        errors.append("one special character")
+    if errors:
+        raise ValueError(f"Password must contain: {', '.join(errors)}.")
+    return v
+
+
 class UserRegister(BaseModel):
     email: EmailStr
     password: str = Field(min_length=8, max_length=128)
@@ -40,21 +58,26 @@ class UserRegister(BaseModel):
     @field_validator("password")
     @classmethod
     def password_strength(cls, v: str) -> str:
-        import re
-        errors = []
-        if len(v) < 8:
-            errors.append("at least 8 characters")
-        if not re.search(r"[A-Z]", v):
-            errors.append("one uppercase letter")
-        if not re.search(r"[a-z]", v):
-            errors.append("one lowercase letter")
-        if not re.search(r"[0-9]", v):
-            errors.append("one number")
-        if not re.search(r"[^A-Za-z0-9]", v):
-            errors.append("one special character")
-        if errors:
-            raise ValueError(f"Password must contain: {', '.join(errors)}.")
-        return v
+        return _validate_password_strength(v)
+
+
+class ChangePasswordRequest(BaseModel):
+    current_password: str
+    new_password: str = Field(min_length=8, max_length=128)
+
+    @field_validator("new_password")
+    @classmethod
+    def password_strength(cls, v: str) -> str:
+        return _validate_password_strength(v)
+
+
+class DeleteAccountRequest(BaseModel):
+    # OAuth-only accounts (no password) confirm by retyping their email instead.
+    current_password: str | None = None
+
+
+class UpdateUsernameRequest(BaseModel):
+    username: str = Field(min_length=1, max_length=50)
 
 
 class UserLogin(BaseModel):
@@ -65,8 +88,10 @@ class UserLogin(BaseModel):
 class UserOut(BaseModel):
     id: int
     email: EmailStr
+    username: str
     created_at: datetime
     has_github: bool = False
+    has_password: bool = False
 
     model_config = ConfigDict(from_attributes=True)
 

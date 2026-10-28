@@ -16,6 +16,10 @@ class User(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     email: Mapped[str] = mapped_column(String(255), unique=True, index=True, nullable=False)
+    # A display name so the UI doesn't have to show the full email everywhere.
+    # Not unique/validated as an identifier — purely cosmetic, defaults to the
+    # email's local part at signup and is editable from Settings.
+    username: Mapped[str] = mapped_column(String(50), nullable=False)
     hashed_password: Mapped[str] = mapped_column(String(255), nullable=False)
     is_verified: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     verification_token: Mapped[str | None] = mapped_column(String(64), nullable=True)
@@ -25,6 +29,12 @@ class User(Base):
     @property
     def has_github(self) -> bool:
         return bool(self.github_access_token)
+
+    @property
+    def has_password(self) -> bool:
+        # Google/GitHub-only signups get hashed_password="" (see auth.py) — they have
+        # no password to change until they set one, which isn't supported yet.
+        return bool(self.hashed_password)
 
     projects: Mapped[list["Project"]] = relationship(back_populates="user", cascade="all, delete-orphan")
     dashboard_chat_messages: Mapped[list["DashboardChatMessage"]] = relationship(
