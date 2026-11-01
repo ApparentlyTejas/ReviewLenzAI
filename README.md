@@ -83,7 +83,19 @@ The Vercel → Render proxy keeps auth cookies first-party and eliminates CORS e
 
 Projects are owned by an **organization**, not a user. Every request resolves its org from an `X-Org-Id` header (falling back to the caller's earliest membership), and an owner/admin/member role on that org gates destructive actions like deleting a project or rotating its webhook secret.
 
----
+Inside the backend, both review-triggering paths (a manual request from `reviews.py`, or a GitHub push via `webhooks.py`) converge on the same `review_runner.run_review()` rather than duplicating the pipeline:
+
+```mermaid
+flowchart LR
+  REV["routers/reviews.py<br/>POST /reviews"] --> RUN
+  WH["routers/webhooks.py<br/>push event"] --> RUN
+  RUN["services/review_runner.py<br/>run_review()"] --> GH["services/github_service.py<br/>fetch PR diff"]
+  RUN --> CR["services/crypto_service.py<br/>decrypt stored GitHub PAT"]
+  RUN --> DF["services/diff_filter.py<br/>strip ignored paths"]
+  RUN --> LLM["services/llm_service.py<br/>Groq structured tool-call"]
+  RUN --> EM["services/email_service.py<br/>notify on completion"]
+  RUN --> FM[("Finding / Review rows<br/>Postgres")]
+```
 
 ## Tech stack
 
