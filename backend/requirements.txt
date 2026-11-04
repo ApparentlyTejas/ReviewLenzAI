@@ -17,4 +17,4 @@ slowapi==0.1.10
 python-multipart==0.0.32
 google-auth==2.62.0
 pytest==9.0.3
-pytest-asyncio==1.3.0
+pytest-asyncio==1.4.1
