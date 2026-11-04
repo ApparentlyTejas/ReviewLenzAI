@@ -12,7 +12,7 @@ bcrypt==4.0.1
 python-jose[cryptography]==3.3.0
 cryptography==46.0.7
 httpx==0.28.1
-groq==0.15.0
+groq==1.7.0
 slowapi==0.1.10
 python-multipart==0.0.32
 google-auth==2.62.0
