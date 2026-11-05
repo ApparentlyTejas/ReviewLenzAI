@@ -1,3 +1,5 @@
+from html import escape
+
 import httpx
 
 from app.core.config import settings
@@ -77,6 +79,11 @@ def send_review_ready_email(
     review_url: str,
 ) -> None:
     findings_text = f"{finding_count} finding{'s' if finding_count != 1 else ''}"
+    # pr_title comes straight from the GitHub PR and is written by whoever opened
+    # it — anyone with push/PR access to the watched repo, not just this email's
+    # recipient — so it must be HTML-escaped before going into an email body.
+    safe_pr_title = escape(pr_title)
+    safe_repo = escape(repo)
     _send(
         to=to,
         subject=f"Review ready — PR #{pr_number}: {pr_title}",
@@ -84,8 +91,8 @@ def send_review_ready_email(
         <div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:32px 24px">
           <h1 style="font-size:22px;font-weight:700;margin-bottom:4px">Review complete</h1>
           <p style="color:#555;margin-bottom:24px;line-height:1.6">
-            AI review finished for <strong>PR #{pr_number}: {pr_title}</strong>
-            in <strong>{repo}</strong>.<br>
+            AI review finished for <strong>PR #{pr_number}: {safe_pr_title}</strong>
+            in <strong>{safe_repo}</strong>.<br>
             Found <strong>{findings_text}</strong>.
           </p>
           <a href="{review_url}"

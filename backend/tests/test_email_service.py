@@ -93,3 +93,28 @@ def test_send_review_ready_email_pluralizes_multiple_findings(mock_post, mock_se
 
     _, kwargs = mock_post.call_args
     assert "3 findings" in kwargs["json"]["htmlContent"]
+
+
+@patch("app.services.email_service.settings")
+@patch("app.services.email_service.httpx.post")
+def test_send_review_ready_email_escapes_a_malicious_pr_title(mock_post, mock_settings):
+    # pr_title is whatever the GitHub PR's author typed, not something this
+    # app controls — anyone who can open a PR on a watched repo can put HTML
+    # in it, and it must not reach the recipient's inbox unescaped.
+    mock_settings.brevo_api_key = "fake-key"
+    mock_settings.brevo_from_email = "noreply@reviewlenzai.com"
+    mock_settings.app_url = "https://reviewlenzai.vercel.app"
+    mock_post.return_value = MagicMock(status_code=200)
+
+    send_review_ready_email(
+        to="user@example.com",
+        pr_title="<img src=x onerror=alert(1)>",
+        pr_number=42,
+        repo="octocat/Hello-World",
+        finding_count=1,
+        review_url="https://reviewlenzai.vercel.app/projects/1/reviews/1",
+    )
+
+    _, kwargs = mock_post.call_args
+    assert "<img" not in kwargs["json"]["htmlContent"]
+    assert "&lt;img src=x onerror=alert(1)&gt;" in kwargs["json"]["htmlContent"]
