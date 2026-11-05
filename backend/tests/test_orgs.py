@@ -105,6 +105,38 @@ def test_owner_can_demote_and_remove_a_member(client):
     assert len(members) == 1
 
 
+def test_admin_cannot_remove_an_owner(client):
+    # An admin has elevated permissions, but removing an owner is still an
+    # owner-only action — otherwise an admin could demote-by-eviction an
+    # owner they have no authority to demote via the role-change endpoint.
+    owner_headers = _register_and_login(client, "owner6@example.com")
+    owner_id = client.get("/auth/me", headers=owner_headers).json()["id"]
+    _register_and_login(client, "admin6@example.com")
+    org_id = client.get("/orgs", headers=owner_headers).json()[0]["id"]
+    client.post(f"/orgs/{org_id}/members", json={"email": "admin6@example.com", "role": "admin"}, headers=owner_headers)
+
+    admin_headers = _login(client, "admin6@example.com")
+    resp = client.delete(f"/orgs/{org_id}/members/{owner_id}", headers=admin_headers)
+    assert resp.status_code == 403
+
+    members = client.get(f"/orgs/{org_id}/members", headers=owner_headers).json()
+    assert any(m["user_id"] == owner_id for m in members)
+
+
+def test_owner_can_remove_another_owner(client):
+    owner_headers = _register_and_login(client, "owner7@example.com")
+    _register_and_login(client, "owner7b@example.com")
+    org_id = client.get("/orgs", headers=owner_headers).json()[0]["id"]
+    client.post(f"/orgs/{org_id}/members", json={"email": "owner7b@example.com", "role": "owner"}, headers=owner_headers)
+
+    second_owner_id = next(
+        m["user_id"] for m in client.get(f"/orgs/{org_id}/members", headers=owner_headers).json() if m["email"] == "owner7b@example.com"
+    )
+
+    resp = client.delete(f"/orgs/{org_id}/members/{second_owner_id}", headers=owner_headers)
+    assert resp.status_code == 204
+
+
 @patch("app.routers.projects.github_service.validate_repo_access")
 def test_projects_are_scoped_to_the_active_org_not_just_the_user(mock_validate, client):
     owner_headers = _register_and_login(client, "multiorg@example.com")

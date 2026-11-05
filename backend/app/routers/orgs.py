@@ -129,8 +129,11 @@ def remove_member(
     if target is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Member not found")
 
-    if target.user_id != current_user.id and requester.role not in _MANAGE_ROLES:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only an owner or admin can remove members")
+    if target.user_id != current_user.id:
+        if requester.role not in _MANAGE_ROLES:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only an owner or admin can remove members")
+        if target.role == MembershipRole.owner and requester.role != MembershipRole.owner:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only an owner can remove another owner")
 
     if target.role == MembershipRole.owner:
         remaining_owners = (
