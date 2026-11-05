@@ -24,10 +24,10 @@ _OFF_TOPIC_MESSAGE = "I can only help with questions about this pull request's d
 
 def _get_owned_review(db: Session, project_id: int, review_id: int, org: Organization) -> Review:
     project = db.get(Project, project_id)
-    if project is None or project.org_id != org.id:
+    if project is None or project.org_id != org.id or project.deleted_at is not None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
     review = db.get(Review, review_id)
-    if review is None or review.project_id != project.id:
+    if review is None or review.project_id != project.id or review.deleted_at is not None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Review not found")
     return review
 

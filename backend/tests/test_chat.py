@@ -1,4 +1,5 @@
 import json
+from datetime import UTC, datetime
 from unittest.mock import patch
 
 from app.schemas.review import ReviewFindings
@@ -273,3 +274,48 @@ def test_clear_chat_messages_on_other_users_review_returns_404(client):
     response = client.delete(f"/projects/{project_id}/reviews/{review_id}/chat", headers=headers_b)
 
     assert response.status_code == 404
+
+
+@patch(f"{_CHAT_PATCH_TARGET}.stream_chat_answer")
+def test_send_chat_message_on_a_deleted_review_returns_404(mock_stream, client):
+    headers = _register_and_login(client, "chat-deleted-review@example.com")
+    project_id = _create_project(client, headers)
+    review_id = _create_completed_review(client, headers, project_id)
+
+    assert client.delete(f"/projects/{project_id}/reviews/{review_id}", headers=headers).status_code == 204
+
+    response = client.post(
+        f"/projects/{project_id}/reviews/{review_id}/chat",
+        json={"content": "hi"},
+        headers=headers,
+    )
+
+    assert response.status_code == 404
+    mock_stream.assert_not_called()
+
+
+@patch(f"{_CHAT_PATCH_TARGET}.stream_chat_answer")
+def test_send_chat_message_on_a_deleted_project_returns_404(mock_stream, client):
+    from app.core.database import get_db
+    from app.main import app
+    from app.models.project import Project
+
+    headers = _register_and_login(client, "chat-deleted-project@example.com")
+    project_id = _create_project(client, headers)
+    review_id = _create_completed_review(client, headers, project_id)
+
+    db_gen = app.dependency_overrides[get_db]()
+    db = next(db_gen)
+    project = db.get(Project, project_id)
+    project.deleted_at = datetime.now(UTC)
+    db.commit()
+    db.close()
+
+    response = client.post(
+        f"/projects/{project_id}/reviews/{review_id}/chat",
+        json={"content": "hi"},
+        headers=headers,
+    )
+
+    assert response.status_code == 404
+    mock_stream.assert_not_called()
