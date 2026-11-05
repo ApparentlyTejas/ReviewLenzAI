@@ -28,7 +28,7 @@ def build_dashboard_context(db: Session, org_id: int) -> DashboardContext:
     answers in: per-project stats, recent reviews, and the most severe open findings.
     Built fresh per request (not cached) since it needs to reflect the latest reviews.
     """
-    projects = db.query(Project).filter(Project.org_id == org_id).all()
+    projects = db.query(Project).filter(Project.org_id == org_id, Project.deleted_at.is_(None)).all()
 
     if not projects:
         return DashboardContext(
@@ -41,7 +41,7 @@ def build_dashboard_context(db: Session, org_id: int) -> DashboardContext:
 
     reviews = (
         db.query(Review)
-        .filter(Review.project_id.in_(project_ids))
+        .filter(Review.project_id.in_(project_ids), Review.deleted_at.is_(None))
         .order_by(Review.created_at.desc())
         .all()
     )

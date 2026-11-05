@@ -1,7 +1,9 @@
+from datetime import UTC, datetime
 from unittest.mock import patch
 
 from app.models.finding import Finding, FindingCategory, FindingSeverity
 from app.models.membership import Membership
+from app.models.project import Project
 from app.models.review import Review, ReviewStatus
 from app.services.dashboard_context import (
     MAX_FINDINGS_IN_CONTEXT,
@@ -87,6 +89,7 @@ def test_build_dashboard_context_includes_repo_and_findings(mock_validate, clien
 def test_build_dashboard_context_caps_findings_shown(mock_validate, client, db_session):
     headers = _register_and_login(client, "ctx-many@example.com")
     user_id = client.get("/auth/me", headers=headers).json()["id"]
+    org_id = _org_id_for(db_session, user_id)
 
     project_id = client.post(
         "/projects",
@@ -121,7 +124,7 @@ def test_build_dashboard_context_caps_findings_shown(mock_validate, client, db_s
     )
     db_session.commit()
 
-    context = build_dashboard_context(db_session, user_id)
+    context = build_dashboard_context(db_session, org_id)
 
     total = MAX_FINDINGS_IN_CONTEXT + 10
     assert f"Total findings across all reviews: {total}" in context.summary_text
@@ -143,3 +146,58 @@ def test_build_dashboard_context_excludes_other_users_data(mock_validate, client
     context = build_dashboard_context(db_session, user_b_id)
 
     assert context.has_any_data is False
+
+
+@patch("app.routers.projects.github_service.validate_repo_access")
+def test_build_dashboard_context_excludes_soft_deleted_project(mock_validate, client, db_session):
+    headers = _register_and_login(client, "ctx-deleted-project@example.com")
+    user_id = client.get("/auth/me", headers=headers).json()["id"]
+    org_id = _org_id_for(db_session, user_id)
+
+    project_id = client.post(
+        "/projects",
+        json={"repo_owner": "octocat", "repo_name": "Hello-World", "github_pat": "ghp_fake"},
+        headers=headers,
+    ).json()["id"]
+
+    project = db_session.get(Project, project_id)
+    project.deleted_at = datetime.now(UTC)
+    db_session.commit()
+
+    context = build_dashboard_context(db_session, org_id)
+
+    # A deleted project shouldn't still be visible to the dashboard assistant,
+    # same as it's already hidden from the project list and dashboard stats.
+    assert context.has_any_data is False
+    assert "octocat/Hello-World" not in context.summary_text
+
+
+@patch("app.routers.projects.github_service.validate_repo_access")
+def test_build_dashboard_context_excludes_soft_deleted_review(mock_validate, client, db_session):
+    headers = _register_and_login(client, "ctx-deleted-review@example.com")
+    user_id = client.get("/auth/me", headers=headers).json()["id"]
+    org_id = _org_id_for(db_session, user_id)
+
+    project_id = client.post(
+        "/projects",
+        json={"repo_owner": "octocat", "repo_name": "Hello-World", "github_pat": "ghp_fake"},
+        headers=headers,
+    ).json()["id"]
+
+    review = Review(
+        project_id=project_id,
+        pr_number=9,
+        pr_title="Deleted review",
+        pr_url="https://github.com/octocat/Hello-World/pull/9",
+        diff_snapshot="diff",
+        status=ReviewStatus.completed,
+        model_used="qwen/qwen3.8-27b",
+        deleted_at=datetime.now(UTC),
+    )
+    db_session.add(review)
+    db_session.commit()
+
+    context = build_dashboard_context(db_session, org_id)
+
+    assert "Deleted review" not in context.summary_text
+    assert "0 review(s)" in context.summary_text
