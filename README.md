@@ -9,7 +9,7 @@
 ![Python](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.130-009688?logo=fastapi&logoColor=white)
 ![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)
-![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white)
+![TypeScript](https://img.shields.io/badge/TypeScript-7-3178C6?logo=typescript&logoColor=white)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Neon-336791?logo=postgresql&logoColor=white)
 
 ![ReviewLenzAI landing page](docs/screenshots/landing.png)
@@ -151,8 +151,8 @@ A few things that were harder than they look from the feature list:
 **Prerequisites:** Python 3.12+, Node 20+, PostgreSQL
 
 ```bash
-git clone https://github.com/ApparentlyTejas/ai-code-review-assistant.git
-cd ai-code-review-assistant
+git clone https://github.com/ApparentlyTejas/ReviewLenzAI.git
+cd ReviewLenzAI
 ```
 
 **Backend**
@@ -201,7 +201,7 @@ npm run dev            # http://localhost:5173
 cd backend && pytest
 ```
 
-Backend (157 tests, 84% coverage) covers auth flows, org/membership scoping and RBAC, project isolation across organizations, GitHub service (mocked), LLM service (mocked, including the on-topic classifier's allow/block/fail-open paths), and every router. Frontend (117 tests) covers every `src/api/*.ts` client function (success + error paths, including the 401 session-expiry interceptor), shared hooks and utilities, and several page/component flows. Coverage is deliberately uneven on the frontend: API clients and logic-heavy utilities sit near 100%, while large presentational pages are thinner, since the components most likely to hide a real bug are the ones with branching logic, not JSX layout.
+Backend (164 tests, 84% coverage) covers auth flows, org/membership scoping and RBAC, project isolation across organizations, GitHub service (mocked), LLM service (mocked, including the on-topic classifier's allow/block/fail-open paths), and every router. Frontend (132 tests) covers every `src/api/*.ts` client function (success + error paths, including the 401 session-expiry interceptor), shared hooks and utilities, and several page/component flows. Coverage is deliberately uneven on the frontend: API clients and logic-heavy utilities sit near 100%, while large presentational pages are thinner, since the components most likely to hide a real bug are the ones with branching logic, not JSX layout.
 
 ---
 
