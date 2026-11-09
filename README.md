@@ -162,6 +162,16 @@ Run with ApacheBench against a local instance (Postgres 16, FastAPI/uvicorn, no 
 
 Reproduce it: seed data with the SQL in [`docs/load-test/seed.sql`](docs/load-test/seed.sql) against a local Postgres, run the API, get a bearer token from `/auth/login`, then `ab -n 500 -c 10 -H "Authorization: Bearer <token>" http://localhost:8000/<endpoint>`.
 
+## Security notes
+
+- Auth cookies are `httponly`, and the Vercel-to-Render proxy ([ADR 2](docs/adr/0002-vercel-render-proxy-for-first-party-cookies.md)) keeps them first-party rather than relying on cross-origin CORS credentials, which Safari/Firefox's tracking prevention would otherwise break for real users, not just in a CORS error you'd catch in dev.
+- Stored GitHub PATs and Google OAuth tokens are encrypted at rest (Fernet, `crypto_service.py`), so a database leak alone doesn't hand out live GitHub/Google access.
+- Passwords are bcrypt-hashed (`passlib`), 8+ characters with uppercase/lowercase/number/special-character enforcement at registration.
+- `/auth/login`, `/auth/register`, and the other auth-mutating endpoints are rate-limited per IP via `slowapi` (5-10/minute depending on the route).
+- `X-Content-Type-Options: nosniff` and `X-Frame-Options: DENY` are set on every response (`app/main.py`).
+- Every project/review/finding read and write is scoped to the caller's organization via membership checks, not just the caller's user id; `tests/test_orgs.py` and `tests/test_projects.py` cover cross-organization isolation directly (one org's membership can't read or act on another org's projects).
+- Known gaps: no 2FA, and the GitHub OAuth flow (`GitHubLoginButton.tsx`, `routers/auth.py`'s `/auth/github`) doesn't send or verify an OAuth `state` parameter at all, so it has no CSRF protection against an authorization-code-injection attack on login. Lower-risk than it sounds for a single-tenant SPA with no third-party OAuth clients today, but it's a real gap, not a deliberate tradeoff, and the fix is small (generate a `state`, store it client-side before the redirect, and reject the callback if it doesn't match).
+
 ---
 
 ## Running locally
