@@ -144,6 +144,8 @@ A few things that were harder than they look from the feature list:
 - **The on-topic chat filter is a second, cheap LLM call, not a keyword list.** A classifier call gates the main chat response and is designed to fail open: if the classifier call itself errors, the request proceeds rather than silently blocking a legitimate question.
 - **A CSS alignment bug that looked fixed three times before it actually was.** The root cause was two rules setting different properties on the same element at different specificities (a global `label { flex-direction: column }` beating a more specific class's `display: flex`), which isn't visible from reading the markup. Only confirmed by screenshotting the real compiled page.
 
+The multi-tenancy migration and the cookie/CORS decision behind it are written up as ADRs: [ADR 1 - organizations migrated in place](docs/adr/0001-organizations-migrated-in-place.md), [ADR 2 - proxying through Vercel for first-party cookies](docs/adr/0002-vercel-render-proxy-for-first-party-cookies.md).
+
 ---
 
 ## Running locally
