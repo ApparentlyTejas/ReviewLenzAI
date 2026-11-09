@@ -148,6 +148,22 @@ The multi-tenancy migration and the cookie/CORS decision behind it are written u
 
 ---
 
+## Load test results
+
+Run with ApacheBench against a local instance (Postgres 16, FastAPI/uvicorn, no external calls — Groq/GitHub/email endpoints are excluded since they depend on metered third-party APIs), seeded with 20 projects, 600 reviews, and 3,600 findings so the org-scoped queries have a realistic amount of data to filter, not an empty table:
+
+| Endpoint | What it exercises | Concurrency | Requests | Req/s | p50 | p95 | p99 |
+|---|---|---|---|---|---|---|---|
+| `GET /projects` | JWT auth, org-scoped project list | 10 | 500 | 574 | 16ms | 26ms | 54ms |
+| `GET /dashboard/summary` | JWT auth, aggregation across projects/reviews/findings | 10 | 500 | 249 | 37ms | 51ms | 154ms |
+| `GET /auth/me` | JWT decode, single-row lookup | 10 | 500 | 748 | 12ms | 24ms | 50ms |
+
+`/dashboard/summary` is the slowest of the three because it aggregates across every project an org owns, not a single-row or single-table read; still under 40ms median at this data volume. `/auth/login` and `/auth/register` are rate-limited to 5/minute per IP by design (`slowapi`), so they aren't load tested at concurrency the way the endpoints above are — a single login, bcrypt password verification included, took ~20ms locally, well under the login rate limit's window.
+
+Reproduce it: seed data with the SQL in [`docs/load-test/seed.sql`](docs/load-test/seed.sql) against a local Postgres, run the API, get a bearer token from `/auth/login`, then `ab -n 500 -c 10 -H "Authorization: Bearer <token>" http://localhost:8000/<endpoint>`.
+
+---
+
 ## Running locally
 
 **Prerequisites:** Python 3.12+, Node 20+, PostgreSQL
